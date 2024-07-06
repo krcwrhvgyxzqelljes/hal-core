@@ -117,6 +117,8 @@ private slots:
 
     void on_toolButton_scope_toggled(bool checked);
 
+    void on_toolButton_clear_toolpath_pressed();
+
 public:
     OcctQtViewer *occ;
     form_dro *dro = new form_dro();

@@ -196,5 +196,6 @@
         <file>../../pictures/btn_25_25_text_edit.png</file>
         <file>../../pictures/btn_25_25_settings.png</file>
         <file>../../pictures/cyberdyne.jpg</file>
+        <file>../../pictures/btn_25_25_clear.png</file>
     </qresource>
 </RCC>

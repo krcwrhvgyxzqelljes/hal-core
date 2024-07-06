@@ -1,0 +1,1 @@
+/home/user/hal-core-2.0/vendor/gcode_parser/gcode_parser.cpp:150

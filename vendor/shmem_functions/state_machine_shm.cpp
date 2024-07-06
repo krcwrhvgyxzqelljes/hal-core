@@ -261,6 +261,12 @@ inline void load_gcode(shared_mem_data &shm) {
     s0.p1={shm.scd[0].guipos, shm.scd[1].guipos, svec[0].p0.Z()+5};
     s0.lenght=s0.p0.Distance(s0.p1);
 
+    s0.abc0={shm.scd[3].guipos, shm.scd[4].guipos, shm.scd[5].guipos}; // Todo add lenght, comparision master move.
+    s0.abc1={0, 0, 0};
+
+    s0.uvw0={shm.scd[6].guipos, shm.scd[7].guipos, shm.scd[8].guipos};
+    s0.uvw1={0, 0, 0};
+
     shape s1;
     s1.g_id=0;
     s1.p0=s0.p1;
@@ -272,6 +278,9 @@ inline void load_gcode(shared_mem_data &shm) {
     s2.p0=s1.p1;
     s2.p1=svec[0].p0;
     s2.lenght=s2.p0.Distance(s2.p1);
+
+    s0.abc1=svec[0].abc0;
+    s0.uvw1=svec[0].uvw0;
 
     // Insert the shapes at the front of svec
     svec.insert(svec.begin(), s2); // Insert s3 at the front
@@ -337,27 +346,57 @@ inline void handle_auto(shared_mem_data &shm){
         gp_Pnt pw=svec[svec_nr].pw;
         gp_Pnt p1=svec[svec_nr].p1;
 
+        gp_Pnt abc0=svec[svec_nr].abc0;
+        gp_Pnt abc1=svec[svec_nr].abc1;
+        gp_Pnt abc_pi;
+
+        gp_Pnt uvw0=svec[svec_nr].uvw0;
+        gp_Pnt uvw1=svec[svec_nr].uvw1;
+        gp_Pnt uvw_pi;
+
         double progress=(sctp.guipos-svec[svec_nr].lenght_begin) /*lenght done*/ / svec[svec_nr].lenght;
 
         if(svec[svec_nr].lenght==0){ // Avoid NAN when svec lenght=0.
             progress=1;
         }
-        std::cout<<"progress:"<<progress<<std::endl;
+        // std::cout<<"progress:"<<progress<<std::endl;
 
         if(svec[svec_nr].g_id==0 || svec[svec_nr].g_id==1 ){
             draw_primitives::interpolate_point_on_line(p0,p1,progress,pi);
+            draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
+            draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
         }
         if(svec[svec_nr].g_id==2 || svec[svec_nr].g_id==3 ){
             draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress,pi);
+            draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
+            draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
         }
 
         shm.pos[0]=pi.X();
         shm.pos[1]=pi.Y();
         shm.pos[2]=pi.Z();
 
+        shm.pos[3]=abc_pi.X();
+        shm.pos[4]=abc_pi.Y();
+        shm.pos[5]=abc_pi.Z();
+
+        shm.pos[6]=uvw_pi.X();
+        shm.pos[7]=uvw_pi.Y();
+        shm.pos[8]=uvw_pi.Z();
+
+
+        // Update jog axis 0-9.
         shm.scd[0].guipos=pi.X();
         shm.scd[1].guipos=pi.Y();
         shm.scd[2].guipos=pi.Z();
+
+        shm.scd[3].guipos=abc_pi.X();
+        shm.scd[4].guipos=abc_pi.Y();
+        shm.scd[5].guipos=abc_pi.Z();
+
+        shm.scd[6].guipos=uvw_pi.X();
+        shm.scd[7].guipos=uvw_pi.Y();
+        shm.scd[8].guipos=uvw_pi.Z();
 
         shm.curvel=sctp.guivel;
         shm.curacc=sctp.guiacc;

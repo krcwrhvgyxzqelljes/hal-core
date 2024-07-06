@@ -142,23 +142,26 @@ public:
     static Handle(AIS_Shape) draw_2d_gcode_G2_xy_helix_g2_continuity_test(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& pc, const int& turns);
     static Handle(AIS_Shape) draw_2d_gcode_G3_xy_helix(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& pc, const int& turns);
     static Handle(AIS_Shape) draw_2d_gcode_G2_helix(const gp_Pnt& p0, const gp_Pnt& p1, const int& plane,
-                                                 const double& i, const double& j, const double& k ,const int& turns, const int& g2_continuity);
+                                                    const double& i, const double& j, const double& k ,const int& turns, const int& g2_continuity);
     static Handle(AIS_Shape) draw_2d_gcode_G3_helix(const gp_Pnt& p0, const gp_Pnt& p1, const int& plane,
-                                                 const double& i, const double& j, const double& k ,const int& turns, const int& g2_continuity);
+                                                    const double& i, const double& j, const double& k ,const int& turns, const int& g2_continuity);
     static Handle(AIS_Shape) draw_2d_gcode_G2_G3_helix(const gp_Pnt& p0, const gp_Pnt& p1, const int& plane,const int& gcode,
-                                                 const double& i, const double& j, const double& k ,const int& turns, const int& g2_continuity);
+                                                       const double& i, const double& j, const double& k ,const int& turns, const int& g2_continuity);
 
     // Draw 3d primitives:
     static Handle(AIS_Shape) draw_3d_point(gp_Pnt point);
     static Handle(AIS_Shape) draw_3d_line(const gp_Pnt &p0, const gp_Pnt &p1);
+    static Handle(AIS_Shape) draw_3d_line_vector(const gp_Pnt &p0, const double &lenght, const double &a, const double &b, const double &c, gp_Pnt &pi);
     static Handle(AIS_Shape) draw_3d_gcode_line(gp_Pnt p0, gp_Pnt p1, int gcode, gp_Pnt &pw);
     static Handle(AIS_Shape) draw_3d_line_wire(std::vector<gp_Pnt> pvec);
+    static Handle(AIS_Shape) draw_3d_line_wire_low_memory_usage(const std::vector<gp_Pnt>& pvec);
+    static Handle(AIS_Shape) draw_3d_line_wire_low_memory_usage(const std::vector<gp_Pnt>& pvec, Handle(AIS_Shape) existingShape);
     static Handle(AIS_Shape) draw_3p_3d_arc(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1);
     static Handle(AIS_Shape) draw_3d_acad_arc(gp_Pnt center, double radius, double alpha1, double alpha2, gp_Dir dir);
     static Handle(AIS_Shape) draw_3d_pc_arc_closest(gp_Pnt point1,gp_Pnt point2,gp_Pnt center,gp_Dir dir ,gp_Pnt closest);
     static Handle(AIS_Shape) draw_3d_gcode_arc_circle_helix(const gp_Pnt& p0, const gp_Pnt& p1,const int& plane,const int& gcode,
-                                                             const double& i, const double& j, const double& k,
-                                                             const int& turns, const int& g2_continuity, gp_Pnt &pw);
+                                                            const double& i, const double& j, const double& k,
+                                                            const int& turns, const int& g2_continuity, gp_Pnt &pw);
     static Handle(AIS_Shape) draw_3d_pc_arc(gp_Pnt point1, gp_Pnt point2, gp_Pnt center, double dir_Xv, double dir_Yv, double dir_Zv, gp_Pnt &pw);
     static Handle(AIS_Shape) draw_3d_pc_arc(gp_Pnt point1,gp_Pnt point2,gp_Pnt center, double dir_Xv, double dir_Yv, double dir_Zv);
     static Handle(AIS_Shape) draw_3p_3d_circle(gp_Pnt point1,gp_Pnt point2,gp_Pnt point3);
@@ -179,9 +182,11 @@ public:
     static std::vector<Handle(AIS_Shape)> draw_3d_arc_lenght(gp_Pnt point1,gp_Pnt point2,gp_Pnt point3);
     static Handle(AIS_Shape) rotate_3d(Handle(AIS_Shape) shape, gp_Pnt center, double euler_z, double euler_y, double euler_x);
     static Handle(AIS_Shape) rotate_translate_3d_quaternion(Handle(AIS_Shape) shape, gp_Pnt translation, double euler_z, double euler_y, double euler_x);
+    static Handle(AIS_Shape) rotate_translate_3d(Handle(AIS_Shape) shape, gp_Pnt tcp, double a, double b, double c);
     static Handle(AIS_Shape) translate_3d(Handle(AIS_Shape) shape, gp_Pnt current, gp_Pnt target);
     static Handle(AIS_Shape) colorize(Handle(AIS_Shape) shape, Quantity_Color color, double transparancy);
     static double get_line_lenght(gp_Pnt p1, gp_Pnt p2);
+    static void get_transformed_line_points(Handle(AIS_Shape) aShape, gp_Pnt &p0, gp_Pnt &p1);
     static double waypoint_to_bulge(gp_Pnt p1, gp_Pnt pw, gp_Pnt p2);
 
     // Draw 3d sets:
@@ -273,6 +278,11 @@ public:
     static bool is_valid_point(const gp_Pnt &p);
     static Handle(AIS_Shape) draw_universal_3d_shape(gp_Pnt p0, gp_Pnt p1, gp_Pnt p2);
 
+    static std::vector<gp_Pnt> record_tooldir_path_line(gp_Pnt p0, gp_Pnt p1, gp_Pnt abc0, gp_Pnt abc1, double tp_height);
+    static std::vector<gp_Pnt> record_tooldir_path_arc(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1,
+                                                       const gp_Pnt &abc0,
+                                                       const gp_Pnt &abc1,
+                                                       const double tp_height);
 private:
     Handle(XCAFDoc_ColorTool) aColorTool;
     Handle(XCAFDoc_ShapeTool) aShapeTool;

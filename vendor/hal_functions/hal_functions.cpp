@@ -39,6 +39,7 @@ hal_functions::hal_functions()
 void hal_functions::exit(){
     std::cout<<"hal exit."<<std::endl;
     hal_exit(comp_id);
+    std::system("../scripts/./halclean");
 }
 
 void hal_functions::update(){

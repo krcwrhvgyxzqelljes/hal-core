@@ -193,7 +193,7 @@ OcctQtViewer::OcctQtViewer (QWidget* theParent)
       myIsCoreProfile (true)
 {
     // Set the logging level for Qt's OpenGL category to suppress messages
-   qInstallMessageHandler([](QtMsgType, const QMessageLogContext&, const QString&) {});
+    qInstallMessageHandler([](QtMsgType, const QMessageLogContext&, const QString&) {});
 
     Handle(Aspect_DisplayConnection) aDisp = new Aspect_DisplayConnection();
     Handle(OpenGl_GraphicDriver) aDriver = new OpenGl_GraphicDriver (aDisp, false);
@@ -672,21 +672,45 @@ void OcctQtViewer::clear_shapevec(){
     aShapeVec.clear();
 }
 
-void OcctQtViewer::create_tp_cone(){
-    tp_cone=draw_primitives::draw_3d_cone({0,0,0},0.0,5.0,15.0);
+void OcctQtViewer::create_tp_cone(double diameter, double height){
+    tp_cone=draw_primitives::draw_3d_cone({0,0,0},0.0,diameter,height);
     tp_cone->Attributes()->SetFaceBoundaryDraw(true);
     tp_cone->Attributes()->SetFaceBoundaryAspect(new Prs3d_LineAspect(Quantity_NOC_BLACK, Aspect_TOL_SOLID, 1.));
     tp_cone->Attributes()->SetIsoOnTriangulation(true);
     tp_cone->Attributes()->SetDisplayMode(AIS_Shaded);
     tp_cone->SetTransparency(0.7);
+    myContext->Display(tp_cone,false);
 
-    translate_tp_cone(0,0,0,0,-0.5*M_PI,0);
+    tp_cone_x_axis=draw_primitives::colorize( draw_primitives::draw_3d_line({0,0,0},{(diameter/2)+5,0,0}), Quantity_NOC_RED, 0);
+    myContext->Display(tp_cone_x_axis, false);
 
-     myContext->Display(tp_cone,false);
+    tp_cone_y_axis=draw_primitives::colorize( draw_primitives::draw_3d_line({0,0,0},{0,(diameter/2)+5,0}), Quantity_NOC_GREEN, 0);
+    myContext->Display(tp_cone_y_axis, false);
+
+    tp_cone_z_axis=draw_primitives::colorize( draw_primitives::draw_3d_line({0,0,0},{0,0,height}), Quantity_NOC_BLUE, 0);
+    myContext->Display(tp_cone_z_axis, false);
 }
 
-void OcctQtViewer::translate_tp_cone(double x, double y, double z, double eulz, double euly, double eulx){
-    tp_cone=draw_primitives::rotate_translate_3d_quaternion(tp_cone,gp_Pnt(x,y,z),eulz,euly,eulx);
+void OcctQtViewer::translate_tp_cone(double x, double y, double z, double a, double b, double c){
+    tp_cone=draw_primitives::rotate_translate_3d(tp_cone,{x,y,z},a,b,c);
+    tp_cone_x_axis=draw_primitives::rotate_translate_3d(tp_cone_x_axis,{x,y,z},a,b,c);
+    tp_cone_y_axis=draw_primitives::rotate_translate_3d(tp_cone_y_axis,{x,y,z},a,b,c);
+    tp_cone_z_axis=draw_primitives::rotate_translate_3d(tp_cone_z_axis,{x,y,z},a,b,c);
+}
+
+gp_Pnt OcctQtViewer::get_tooldir_pnt(){
+    gp_Pnt p0,p1;
+    draw_primitives::get_transformed_line_points(tp_cone_z_axis,p0,p1);
+    return p1;
+}
+
+void OcctQtViewer::clear_toolpath(){
+    tp_toolpath_vec.clear();
+    tp_tooldir_vec.clear();
+    remove_shape(tp_toolpath_shape);
+    remove_shape(tp_tooldir_shape);
+    tp_toolpath_shape=0;
+    tp_tooldir_shape=0;
 }
 
 void OcctQtViewer::redraw(){
@@ -717,6 +741,41 @@ void OcctQtViewer::remove_shape(Handle(AIS_Shape) aShape){
     //! memory can be released by calling the Nullify() method of the Handle(AIS_Shape) object.
     aShape.Nullify();
 }
+
+void OcctQtViewer::update_toolpath(gp_Pnt tp, double tollerance){
+    if (tp.Distance(old_tp_toolpath) > tollerance) {
+        tp_toolpath_vec.push_back(tp);
+        old_tp_toolpath = tp;
+
+        if (tp_toolpath_shape.IsNull()) {
+            tp_toolpath_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(tp_toolpath_vec), Quantity_NOC_YELLOW, 0.1);
+            myContext->Display(tp_toolpath_shape, false);
+            std::cout<<"creating toolpath"<<std::endl;
+        } else {
+            tp_toolpath_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(tp_toolpath_vec, tp_toolpath_shape), Quantity_NOC_YELLOW, 0.1);
+            myContext->Redisplay(tp_toolpath_shape, false);
+            std::cout<<"updating toolpath"<<std::endl;
+        }
+    }
+}
+
+void OcctQtViewer::update_tooldir(gp_Pnt tp, double tollerance){
+    if (tp.Distance(old_tp_tooldir) > tollerance) {
+        tp_tooldir_vec.push_back(tp);
+        old_tp_tooldir = tp;
+
+        if (tp_tooldir_shape.IsNull()) {
+            tp_tooldir_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(tp_tooldir_vec), Quantity_NOC_BLUE, 0.1);
+            myContext->Display(tp_tooldir_shape, false);
+            // std::cout<<"creating tooldir"<<std::endl;
+        } else {
+            tp_tooldir_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(tp_tooldir_vec, tp_tooldir_shape), Quantity_NOC_BLUE, 0.1);
+            myContext->Redisplay(tp_tooldir_shape, false);
+            // std::cout<<"updating tooldir"<<std::endl;
+        }
+    }
+}
+
 
 void OcctQtViewer::set_view_front()
 {

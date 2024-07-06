@@ -9,7 +9,7 @@ rm -rf module_helper rtapi_app
 cd ..
 
 cd build
-make && make install
+make -j6 && make install
 cd ..
 
 cd bin

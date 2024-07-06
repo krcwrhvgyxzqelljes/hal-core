@@ -108,14 +108,20 @@ public:
     void show_shape(Handle(AIS_Shape) aShape);
     void add_shapevec(Handle(AIS_Shape) aShape);
     void clear_shapevec();
-
     void remove_shape(Handle(AIS_Shape) aShape);
 
+    void update_toolpath(gp_Pnt tp, double tollerance);
+    void update_tooldir(gp_Pnt tp, double tollerance);
+    gp_Pnt get_tooldir_pnt();
+    void clear_toolpath();
 
     Handle(AIS_Shape) tp_cone;
+    Handle(AIS_Shape) tp_cone_x_axis;
+    Handle(AIS_Shape) tp_cone_y_axis;
+    Handle(AIS_Shape) tp_cone_z_axis;
     gp_Trsf tp_cone_trans;
-    void create_tp_cone();
-    void translate_tp_cone(double x, double y, double z, double eulz, double euly, double eulx);
+    void create_tp_cone(double diameter, double height);
+    void translate_tp_cone(double x, double y, double z, double a, double b, double c);
 
     //! Actual xyz mouse coordinates retrieved by hovering a active shape.
     gp_Pnt aMousePnt;
@@ -159,6 +165,14 @@ private:
     GLint m_vaoHandle;
     QString myGlInfo;
     bool myIsCoreProfile;
+
+    std::vector<gp_Pnt> tp_toolpath_vec={{0,0,0}};
+    gp_Pnt old_tp_toolpath={0,0,0};
+    Handle(AIS_Shape) tp_toolpath_shape;
+
+    std::vector<gp_Pnt> tp_tooldir_vec={{0,0,15}};
+    gp_Pnt old_tp_tooldir={0,0,15};
+    Handle(AIS_Shape) tp_tooldir_shape;
 };
 
 #endif // _OcctQtViewer_HeaderFile

@@ -31,7 +31,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->gridLayout_scope->addWidget(scope);
 
     ui->gridLayout_occ->addWidget(occ);
-    occ->create_tp_cone();
+    occ->create_tp_cone(5,15);
 
     editor = new QGCodeEditor();
     ui->gridLayout_gcode->addWidget(editor);
@@ -123,9 +123,13 @@ void MainWindow::update(){
     occ->translate_tp_cone(shm_data.pos[0],
             shm_data.pos[1],
             shm_data.pos[2],
-            shm_data.pos[3],                // Euler Z radians.
-            shm_data.pos[4]+(-0.5*M_PI),    // Euler Y radians.
-            shm_data.pos[5]);               // Euler X radians.
+            shm_data.pos[3],
+            shm_data.pos[4],
+            shm_data.pos[5]);
+
+    double tollerance=0.1;
+    occ->update_toolpath({shm_data.pos[0],shm_data.pos[1],shm_data.pos[2]},tollerance);
+    occ->update_tooldir(occ->get_tooldir_pnt(),tollerance);
 
     occ->redraw();
 }
@@ -298,5 +302,10 @@ void MainWindow::on_toolButton_scope_toggled(bool checked)
              ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(2);
         }
     }
+}
+
+void MainWindow::on_toolButton_clear_toolpath_pressed()
+{
+    occ->clear_toolpath();
 }
 

@@ -34,14 +34,30 @@ void form_auto::on_toolButton_open_pressed()
         mainWindow->ui->label_current_file->setText(QString::fromStdString(m_file_name));
 
         std::vector<gcode_line> gvec;
-        gcode_parser().tokenize(m_file_name,gvec,0);
+        gcode_parser().tokenize(m_file_name,gvec,1);
 
         std::vector<shape> svec;
         gcode_parser().tokens_to_shapes(gvec, svec);
         for (const auto& i : svec) {
             mainWindow->occ->add_shapevec(i.aShape);
+            mainWindow->occ->add_shapevec(i.aShape_tooldir_1);
+            // mainWindow->occ->add_shapevec(i.aShape_tooldir_connect);
+
+            if(i.g_id==0 || i.g_id==1){
+               std::vector<gp_Pnt> pvec=draw_primitives::record_tooldir_path_line(i.p0,i.p1, i.abc0,i.abc1,15);
+               mainWindow->occ->add_shapevec( draw_primitives::draw_3d_line_wire_low_memory_usage(pvec) );
+            }
+            if(i.g_id==2 || i.g_id==3){
+               std::vector<gp_Pnt> pvec=draw_primitives::record_tooldir_path_arc(i.p0,i.pw,i.p1, i.abc0,i.abc1,15);
+               mainWindow->occ->add_shapevec( draw_primitives::draw_3d_line_wire_low_memory_usage(pvec) );
+            }
+
+            //
         }
         svec.clear();
+
+        // Add tooldirection lines.
+
 
         load_file=1;
     }
@@ -67,6 +83,8 @@ void form_auto::on_toolButton_reload_pressed()
         gcode_parser().tokens_to_shapes(gvec,svec);
         for (const auto& i : svec) {
             mainWindow->occ->add_shapevec(i.aShape);
+            mainWindow->occ->add_shapevec(i.aShape_tooldir_1);
+            mainWindow->occ->add_shapevec(i.aShape_tooldir_connect);
         }
         svec.clear();
 

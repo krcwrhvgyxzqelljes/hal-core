@@ -42,9 +42,16 @@ void gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line>
             if(gc.g==17 || gc.g==18 || gc.g==19 || gc.g==20 || gc.g==21){
                 // gvec.push_back(gc);
             }
+
+            if(gc.g==64){
+
+            }
         }
-        if(pair.first=="p"){ // Used for spirals nr of turns..
+        if(pair.first=="p"){ // Used for spirals nr of turns. Used for G64 P..
             gc.p=pair.second;
+        }
+        if(pair.first=="q"){ // Used for G64 P.. Q..
+            gc.q=pair.second;
         }
         if(pair.first=="l"){ // Used for spirals enables g2_continuity mode.
             gc.l=pair.second;
@@ -69,6 +76,17 @@ void gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line>
             gc.k=pair.second;
         }
 
+        if(pair.first=="a"){
+            gc.a=pair.second;
+        }
+        if(pair.first=="b"){
+            gc.b=pair.second;
+        }
+        if(pair.first=="c"){
+            gc.c=pair.second;
+        }
+
+
         if(pair.first=="u"){
             gc.u=pair.second;
         }
@@ -83,11 +101,14 @@ void gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line>
 
     if(debug){
         for(auto line:gvec){
-            std::cout<<"n:"<<line.n<<" g:"<<line.g<<" x: "<<line.x<<" y:"<<line.y<<" z:"<<line.z<<" i:"<<line.i<<" j:"<<line.j<<" k:"<<line.k<<std::endl;
+            std::cout<<"n:"<<line.n<<" g:"<<line.g
+                    <<" x: "<<line.x<<" y:"<<line.y<<" z:"<<line.z
+                   <<" a: "<<line.a<<" b:"<<line.b<<" c:"<<line.c
+                  <<" i:"<<line.i<<" j:"<<line.j<<" k:"<<line.k
+                 <<std::endl;
         }
     }
 }
-
 
 void gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec){
 
@@ -102,6 +123,8 @@ void gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::ve
     int plane=0;
     int turns=0; // For spirals, they use the P word for nr of turns.
     int to_inches=0;
+    double g64_p=0;
+    double g64_q=0;
 
     int line=1;
     for(auto g:gvec){
@@ -123,6 +146,11 @@ void gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::ve
             plane=2;
         }
 
+        if(g.g==64){ // G64
+            g64_p=g.p; // Path max deviation, tollerance.
+            g64_q=g.q; // Naive cam tollerance. Filter out tiny segments.
+        }
+
         if(to_inches){
             g.x=g.x*inch_to_mm;
             g.y=g.y*inch_to_mm;
@@ -138,7 +166,6 @@ void gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::ve
             g.k=g.k*inch_to_mm;
         }
 
-
         if(g.g==0 || g.g==1 || g.g==2 || g.g==3 || g.g==9){ // New shape found.
             svec.push_back(sha);
             svec.back().gcode_line=line;
@@ -148,14 +175,6 @@ void gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::ve
             svec.back().e_id=g.e;
         }
 
-        // Line G0, G1.
-        if(svec.back().g_id==0 || svec.back().g_id==1){
-            svec.back().p0=p;
-            svec.back().p1={g.x,g.y,g.z};
-
-            svec.back().abc={g.a,g.b,g.c};
-            svec.back().uvw={g.u,g.v,g.w};
-        }
         if(svec.back().g_id==0){
             svec.back().feed=INFINITY;
         }
@@ -165,23 +184,61 @@ void gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::ve
 
         if(svec.back().g_id==0 || svec.back().g_id==1){ // Draw rapid or line feed.
             svec.back().p0=p;
-            svec.back().p1={g.x,g.y,g.z};  
+            svec.back().p1={g.x,g.y,g.z};
+            svec.back().abc0=abc;
+            svec.back().abc1={g.a,g.b,g.c};
+            svec.back().uvw0=uvw;
+            svec.back().uvw1={g.u,g.v,g.w};
+
             svec.back().aShape=draw_primitives::draw_3d_gcode_line(svec.back().p0, svec.back().p1, svec.back().g_id, svec.back().pw);
+
+
+            svec.back().aShape_tooldir_0=draw_primitives::draw_3d_line_vector(svec.back().p0,15,svec.back().abc0.X(),svec.back().abc0.Y(),svec.back().abc0.Z(),svec.back().ta0);
+            svec.back().aShape_tooldir_1=draw_primitives::draw_3d_line_vector(svec.back().p1,15,svec.back().abc1.X(),svec.back().abc1.Y(),svec.back().abc1.Z(),svec.back().ta1);
+            svec.back().aShape_tooldir_1=draw_primitives::colorize( svec.back().aShape_tooldir_1, Quantity_NOC_AQUAMARINE2, 0.8);
+
+            svec.back().aShape_tooldir_connect= draw_primitives::colorize( draw_primitives::draw_3d_line(svec.back().ta0,svec.back().ta1), Quantity_NOC_GREEN, 0.8);
+
+            //std::vector<gp_Pnt> pvec=draw_primitives::record_tooldir_path_line(svec.back().p0,svec.back().p1,svec.back().abc0,svec.back().abc1,15);
+            //svec.back().aShape_tooldir_connect=draw_primitives::draw_3d_line_wire_low_memory_usage(pvec);
+
+
             svec.back().lenght=svec.back().p0.Distance(svec.back().p1);
+            svec.back().g64_p=g64_p;
+            svec.back().g64_q=g64_q;
         }
 
         // Arc, circle or helix.
         if(svec.back().g_id==2 || svec.back().g_id==3){ // Draw arc G2 or G3. Draw spiral G2 or G3
             svec.back().p0=p;
             svec.back().p1={g.x,g.y,g.z};
+            svec.back().abc0=abc;
+            svec.back().abc1={g.a,g.b,g.c};
+            svec.back().uvw0=uvw;
+            svec.back().uvw1={g.u,g.v,g.w};
             svec.back().turns=g.p; // Set helix turns.
             svec.back().g2_continuity=g.l; // Set helix G2 continuity model.
             svec.back().aShape=draw_primitives::draw_3d_gcode_arc_circle_helix(svec.back().p0, svec.back().p1, plane, svec.back().g_id, g.i, g.j, g.k,
                                                                                svec.back().turns, svec.back().g2_continuity, svec.back().pw);
+
+            svec.back().aShape_tooldir_0=draw_primitives::draw_3d_line_vector(svec.back().p0,15,svec.back().abc0.X(),svec.back().abc0.Y(),svec.back().abc0.Z(),svec.back().ta0);
+            svec.back().aShape_tooldir_1=draw_primitives::draw_3d_line_vector(svec.back().p1,15,svec.back().abc1.X(),svec.back().abc1.Y(),svec.back().abc1.Z(),svec.back().ta1);
+            svec.back().aShape_tooldir_1=draw_primitives::colorize( svec.back().aShape_tooldir_1, Quantity_NOC_AQUAMARINE2, 0.8);
+
+            svec.back().aShape_tooldir_connect= draw_primitives::colorize( draw_primitives::draw_3d_line(svec.back().ta0,svec.back().ta1), Quantity_NOC_GREEN, 0.8);
+
+            //std::vector<gp_Pnt> pvec=draw_primitives::record_tooldir_path_arc(svec.back().p0,svec.back().pw,svec.back().p1,svec.back().abc0,svec.back().abc1,15);
+            //svec.back().aShape_tooldir_connect=draw_primitives::draw_3d_line_wire_low_memory_usage(pvec);
+
+
             // Todo calculate helix lenght.
             svec.back().lenght=draw_primitives::get_3d_arc_lenght(svec.back().p0,svec.back().pw,svec.back().p1);
+            svec.back().g64_p=g64_p;
+            svec.back().g64_q=g64_q;
         }
         p=svec.back().p1;
+        abc=svec.back().abc1;
+        uvw=svec.back().uvw1;
         line++;
     }
 }

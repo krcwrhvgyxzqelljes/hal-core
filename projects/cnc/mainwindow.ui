@@ -76,7 +76,15 @@ color: rgb(255, 255, 255);</string>
             <number>0</number>
            </property>
            <widget class="QWidget" name="page_9">
-            <widget class="QWidget" name="">
+            <widget class="QWidget" name="layoutWidget">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>109</width>
+               <height>474</height>
+              </rect>
+             </property>
              <layout class="QGridLayout" name="gridLayout_9">
               <item row="7" column="0">
                <widget class="QToolButton" name="toolButton_empty_2">
@@ -514,7 +522,133 @@ color: rgb(255, 255, 255);</string>
                    <layout class="QGridLayout" name="gridLayout_4">
                     <item row="0" column="0">
                      <layout class="QGridLayout" name="gridLayout_2">
-                      <item row="0" column="2">
+                      <item row="0" column="5">
+                       <widget class="QToolButton" name="toolButton_view_front">
+                        <property name="text">
+                         <string>...</string>
+                        </property>
+                        <property name="icon">
+                         <iconset resource="icons.qrc">
+                          <normaloff>:/pictures/btn_25_25_view_front.png</normaloff>:/pictures/btn_25_25_view_front.png</iconset>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>35</width>
+                          <height>35</height>
+                         </size>
+                        </property>
+                        <property name="autoRaise">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="8">
+                       <widget class="QToolButton" name="toolButton_view_bottom">
+                        <property name="text">
+                         <string>...</string>
+                        </property>
+                        <property name="icon">
+                         <iconset resource="icons.qrc">
+                          <normaloff>:/pictures/btn_25_25_view_bottom.png</normaloff>:/pictures/btn_25_25_view_bottom.png</iconset>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>35</width>
+                          <height>35</height>
+                         </size>
+                        </property>
+                        <property name="autoRaise">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="10">
+                       <widget class="QToolButton" name="toolButton_view_right">
+                        <property name="maximumSize">
+                         <size>
+                          <width>16777215</width>
+                          <height>16777215</height>
+                         </size>
+                        </property>
+                        <property name="text">
+                         <string>...</string>
+                        </property>
+                        <property name="icon">
+                         <iconset resource="icons.qrc">
+                          <normaloff>:/pictures/btn_25_25_view_right.png</normaloff>:/pictures/btn_25_25_view_right.png</iconset>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>35</width>
+                          <height>35</height>
+                         </size>
+                        </property>
+                        <property name="autoRaise">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="6">
+                       <widget class="QToolButton" name="toolButton_view_back">
+                        <property name="text">
+                         <string>...</string>
+                        </property>
+                        <property name="icon">
+                         <iconset resource="icons.qrc">
+                          <normaloff>:/pictures/btn_25_25_view_back.png</normaloff>:/pictures/btn_25_25_view_back.png</iconset>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>35</width>
+                          <height>35</height>
+                         </size>
+                        </property>
+                        <property name="autoRaise">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="4">
+                       <widget class="QToolButton" name="toolButton_fit_all">
+                        <property name="text">
+                         <string>...</string>
+                        </property>
+                        <property name="icon">
+                         <iconset resource="icons.qrc">
+                          <normaloff>:/pictures/btn_25_25_zoom_extends.png</normaloff>:/pictures/btn_25_25_zoom_extends.png</iconset>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>35</width>
+                          <height>35</height>
+                         </size>
+                        </property>
+                        <property name="autoRaise">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="11">
+                       <widget class="QToolButton" name="toolButton_view_3d">
+                        <property name="text">
+                         <string>...</string>
+                        </property>
+                        <property name="icon">
+                         <iconset resource="icons.qrc">
+                          <normaloff>:/pictures/btn_25_25_view_3d.png</normaloff>:/pictures/btn_25_25_view_3d.png</iconset>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>35</width>
+                          <height>35</height>
+                         </size>
+                        </property>
+                        <property name="autoRaise">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
                        <widget class="QToolButton" name="toolButton_zoom_plus">
                         <property name="text">
                          <string>...</string>
@@ -534,14 +668,14 @@ color: rgb(255, 255, 255);</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="6">
-                       <widget class="QToolButton" name="toolButton_view_top">
+                      <item row="0" column="9">
+                       <widget class="QToolButton" name="toolButton_view_left">
                         <property name="text">
                          <string>...</string>
                         </property>
                         <property name="icon">
                          <iconset resource="icons.qrc">
-                          <normaloff>:/pictures/btn_25_25_view_top.png</normaloff>:/pictures/btn_25_25_view_top.png</iconset>
+                          <normaloff>:/pictures/btn_25_25_view_left.png</normaloff>:/pictures/btn_25_25_view_left.png</iconset>
                         </property>
                         <property name="iconSize">
                          <size>
@@ -554,7 +688,20 @@ color: rgb(255, 255, 255);</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="11">
+                      <item row="0" column="14">
+                       <spacer name="horizontalSpacer">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item row="0" column="12">
                        <widget class="QToolButton" name="toolButton_view_ortho">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -587,27 +734,7 @@ color: rgb(255, 255, 255);</string>
                         </property>
                        </widget>
                       </item>
-                      <item row="0" column="3">
-                       <widget class="QToolButton" name="toolButton_fit_all">
-                        <property name="text">
-                         <string>...</string>
-                        </property>
-                        <property name="icon">
-                         <iconset resource="icons.qrc">
-                          <normaloff>:/pictures/btn_25_25_zoom_extends.png</normaloff>:/pictures/btn_25_25_zoom_extends.png</iconset>
-                        </property>
-                        <property name="iconSize">
-                         <size>
-                          <width>35</width>
-                          <height>35</height>
-                         </size>
-                        </property>
-                        <property name="autoRaise">
-                         <bool>true</bool>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
+                      <item row="0" column="2">
                        <widget class="QToolButton" name="toolButton_zoom_min">
                         <property name="text">
                          <string>...</string>
@@ -615,145 +742,6 @@ color: rgb(255, 255, 255);</string>
                         <property name="icon">
                          <iconset resource="icons.qrc">
                           <normaloff>:/pictures/btn_25_25_zoom_min.png</normaloff>:/pictures/btn_25_25_zoom_min.png</iconset>
-                        </property>
-                        <property name="iconSize">
-                         <size>
-                          <width>35</width>
-                          <height>35</height>
-                         </size>
-                        </property>
-                        <property name="autoRaise">
-                         <bool>true</bool>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="7">
-                       <widget class="QToolButton" name="toolButton_view_bottom">
-                        <property name="text">
-                         <string>...</string>
-                        </property>
-                        <property name="icon">
-                         <iconset resource="icons.qrc">
-                          <normaloff>:/pictures/btn_25_25_view_bottom.png</normaloff>:/pictures/btn_25_25_view_bottom.png</iconset>
-                        </property>
-                        <property name="iconSize">
-                         <size>
-                          <width>35</width>
-                          <height>35</height>
-                         </size>
-                        </property>
-                        <property name="autoRaise">
-                         <bool>true</bool>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="4">
-                       <widget class="QToolButton" name="toolButton_view_front">
-                        <property name="text">
-                         <string>...</string>
-                        </property>
-                        <property name="icon">
-                         <iconset resource="icons.qrc">
-                          <normaloff>:/pictures/btn_25_25_view_front.png</normaloff>:/pictures/btn_25_25_view_front.png</iconset>
-                        </property>
-                        <property name="iconSize">
-                         <size>
-                          <width>35</width>
-                          <height>35</height>
-                         </size>
-                        </property>
-                        <property name="autoRaise">
-                         <bool>true</bool>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="5">
-                       <widget class="QToolButton" name="toolButton_view_back">
-                        <property name="text">
-                         <string>...</string>
-                        </property>
-                        <property name="icon">
-                         <iconset resource="icons.qrc">
-                          <normaloff>:/pictures/btn_25_25_view_back.png</normaloff>:/pictures/btn_25_25_view_back.png</iconset>
-                        </property>
-                        <property name="iconSize">
-                         <size>
-                          <width>35</width>
-                          <height>35</height>
-                         </size>
-                        </property>
-                        <property name="autoRaise">
-                         <bool>true</bool>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="10">
-                       <widget class="QToolButton" name="toolButton_view_3d">
-                        <property name="text">
-                         <string>...</string>
-                        </property>
-                        <property name="icon">
-                         <iconset resource="icons.qrc">
-                          <normaloff>:/pictures/btn_25_25_view_3d.png</normaloff>:/pictures/btn_25_25_view_3d.png</iconset>
-                        </property>
-                        <property name="iconSize">
-                         <size>
-                          <width>35</width>
-                          <height>35</height>
-                         </size>
-                        </property>
-                        <property name="autoRaise">
-                         <bool>true</bool>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="12">
-                       <spacer name="horizontalSpacer">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>40</width>
-                          <height>20</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
-                      <item row="0" column="9">
-                       <widget class="QToolButton" name="toolButton_view_right">
-                        <property name="maximumSize">
-                         <size>
-                          <width>16777215</width>
-                          <height>16777215</height>
-                         </size>
-                        </property>
-                        <property name="text">
-                         <string>...</string>
-                        </property>
-                        <property name="icon">
-                         <iconset resource="icons.qrc">
-                          <normaloff>:/pictures/btn_25_25_view_right.png</normaloff>:/pictures/btn_25_25_view_right.png</iconset>
-                        </property>
-                        <property name="iconSize">
-                         <size>
-                          <width>35</width>
-                          <height>35</height>
-                         </size>
-                        </property>
-                        <property name="autoRaise">
-                         <bool>true</bool>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="8">
-                       <widget class="QToolButton" name="toolButton_view_left">
-                        <property name="text">
-                         <string>...</string>
-                        </property>
-                        <property name="icon">
-                         <iconset resource="icons.qrc">
-                          <normaloff>:/pictures/btn_25_25_view_left.png</normaloff>:/pictures/btn_25_25_view_left.png</iconset>
                         </property>
                         <property name="iconSize">
                          <size>
@@ -778,6 +766,46 @@ color: rgb(255, 255, 255);</string>
                          </size>
                         </property>
                        </spacer>
+                      </item>
+                      <item row="0" column="7">
+                       <widget class="QToolButton" name="toolButton_view_top">
+                        <property name="text">
+                         <string>...</string>
+                        </property>
+                        <property name="icon">
+                         <iconset resource="icons.qrc">
+                          <normaloff>:/pictures/btn_25_25_view_top.png</normaloff>:/pictures/btn_25_25_view_top.png</iconset>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>35</width>
+                          <height>35</height>
+                         </size>
+                        </property>
+                        <property name="autoRaise">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QToolButton" name="toolButton_clear_toolpath">
+                        <property name="text">
+                         <string>...</string>
+                        </property>
+                        <property name="icon">
+                         <iconset resource="icons.qrc">
+                          <normaloff>:/pictures/btn_25_25_clear.png</normaloff>:/pictures/btn_25_25_clear.png</iconset>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>35</width>
+                          <height>35</height>
+                         </size>
+                        </property>
+                        <property name="autoRaise">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
                       </item>
                      </layout>
                     </item>

@@ -27,8 +27,15 @@ include_directories(${SRC_DIR}/../../vendor/shmem_functions)
 include_directories(${SRC_DIR}/../../vendor/occ_draw)
 include_directories(${SRC_DIR}/../../vendor/icons)
 include_directories(${SRC_DIR}/../../vendor/oce-upstream-V7_5_0beta/build/include/opencascade)
-include_directories(${SRC_DIR}/../../vendor/Clothoids/lib/include)
+#include_directories(${SRC_DIR}/../../vendor/Clothoids/lib/include)
+#include_directories(${SRC_DIR}/../../vendor/Clothoids/lib3rd/include)
+
+include_directories(${SRC_DIR}/../../vendor/Clothoids/src)
+include_directories(${SRC_DIR}/../../vendor/Clothoids/src/Clothoids)
+include_directories(${SRC_DIR}/../../vendor/Clothoids/build)
 include_directories(${SRC_DIR}/../../vendor/Clothoids/lib3rd/include)
+include_directories(${SRC_DIR}/../../vendor/Clothoids/lib3rd/include/Utils)
+
 include_directories(${SRC_DIR}/../../vendor/gcode_parser)
 include_directories(${SRC_DIR}/../../vendor/scurve/scurve_engine)
 include_directories(${SRC_DIR}/../../vendor/rs274ngc)
@@ -54,6 +61,24 @@ add_library(halcore_ SHARED IMPORTED) # or STATIC instead of SHARED
 set_target_properties(halcore_ PROPERTIES
     IMPORTED_LOCATION ${BUILD_DIR}/../../../lib/libhalcore.so
     INTERFACE_INCLUDE_DIRECTORIES ${SRC_DIR}/../../src/hal
+)
+
+add_library(clothoids SHARED IMPORTED) # or STATIC instead of SHARED
+set_target_properties(clothoids PROPERTIES
+    IMPORTED_LOCATION ${SRC_DIR}/../../vendor/Clothoids/build/libClothoids_linux.so
+    INTERFACE_INCLUDE_DIRECTORIES ${SRC_DIR}/../../vendor/Clothoids/lib/include
+)
+
+add_library(flocke SHARED IMPORTED) # or STATIC instead of SHARED
+set_target_properties(flocke PROPERTIES
+    IMPORTED_LOCATION ${SRC_DIR}/../../vendor/Clothoids/lib3rd/dll/libquarticRootsFlocke_linux.so
+    INTERFACE_INCLUDE_DIRECTORIES ${SRC_DIR}/../../vendor/Clothoids/lib3rd/include
+)
+
+add_library(utils SHARED IMPORTED) # or STATIC instead of SHARED
+set_target_properties(utils PROPERTIES
+    IMPORTED_LOCATION ${SRC_DIR}/../../vendor/Clothoids/lib3rd/dll/libUtils_linux.so
+    INTERFACE_INCLUDE_DIRECTORIES ${SRC_DIR}/../../vendor/Clothoids/lib3rd/include
 )
 
 ## Set include paths for libraries to link.
@@ -146,8 +171,8 @@ set(PROJECT_SOURCES
 
     ${SRC_DIR}/../../vendor/occ_draw/draw_primitives.h
     ${SRC_DIR}/../../vendor/occ_draw/draw_primitives.cpp
-    # ${SRC_DIR}/../../vendor/occ_draw/draw_clothoids.h
-    # ${SRC_DIR}/../../vendor/occ_draw/draw_clothoids.cpp
+    ${SRC_DIR}/../../vendor/occ_draw/draw_clothoids.h
+    ${SRC_DIR}/../../vendor/occ_draw/draw_clothoids.cpp
 
     ${SRC_DIR}/../../vendor/occ_draw/draw_rs274ngc_shapes.h
     ${SRC_DIR}/../../vendor/occ_draw/draw_rs274ngc_shapes.cpp
@@ -196,17 +221,16 @@ endif ()
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ${OpenCASCADE_LIBS} Qt5::Widgets Qt5::OpenGL Qt5::PrintSupport ${OPENGL_LIBRARIES} ${GLUT_LIBRARY}
     -I../lib -L../lib  halcore_
-
     Qt5::Core
     Qt5::Gui
+    clothoids flocke utils
 )
 
 # Make install
 install(TARGETS ${PROJECT} DESTINATION ${BUILD_DIR}/../../../bin)
 
 # Copy files during build.
-configure_file(${SRC_DIR}/../../vendor/rs274ngc/rs274ngc.var ${BUILD_DIR}/ COPYONLY)
-configure_file(${SRC_DIR}/../../vendor/rs274ngc/rs274ngc.tool_default ${BUILD_DIR}/ COPYONLY)
+configure_file(${SRC_DIR}/../../vendor/Clothoids/build/libClothoids_linux.so ${SRC_DIR}/../../lib COPYONLY)
+configure_file(${SRC_DIR}/../../vendor/Clothoids/build/submodules/quarticRootsFlocke/libquarticRootsFlocke_linux.so ${SRC_DIR}/../../lib COPYONLY)
+configure_file(${SRC_DIR}/../../vendor/Clothoids/build/submodules/Utils/libUtils_linux.so ${SRC_DIR}/../../lib COPYONLY)
 
-configure_file(${SRC_DIR}/../../vendor/rs274ngc/rs274ngc.var ${BUILD_DIR}/../../../bin COPYONLY)
-configure_file(${SRC_DIR}/../../vendor/rs274ngc/rs274ngc.tool_default ${BUILD_DIR}/../../../bin COPYONLY)

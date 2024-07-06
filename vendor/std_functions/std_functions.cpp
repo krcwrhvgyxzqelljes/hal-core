@@ -15,7 +15,6 @@ std_functions::std_functions()
 
 }
 
-
 // Function to parse key-value pairs from the input string
 std::vector<std::pair<std::string, double>> std_functions::parse_string_to_key_and_value(const std::string& input, int debug) {
     std::vector<std::pair<std::string, double>> result;

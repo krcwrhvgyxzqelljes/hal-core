@@ -24,6 +24,7 @@ public:
     double n = 0.0;
     double o = 0.0;
     double p = 0.0;
+    double q = 0.0;
     double r = 0.0;
     double s = 0.0;
     double t = 0.0;
@@ -33,9 +34,6 @@ public:
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;
-    double g64_p = 0.0;
-    double g64_q = 0.0;
-    std::string comment = "";
 };
 
 typedef gp_Pnt gp_Abc;
@@ -57,14 +55,22 @@ struct shape {
     double g2_continuity;       // Spiral, helix g2 continuity model. 1=on.
     int gcode_line;             // Gcode line nr of file.
 
-    gp_Abc abc;
-    gp_Uvw uvw;
+    gp_Abc abc0,abc1;
+    gp_Uvw uvw0,uvw1;
 
     double feed;
     double spindle_speed;
     int tool_nr;
 
     Handle(AIS_Shape) aShape;
+
+    gp_Pnt ta0,ta1;                  // Tool direction offset point.
+    Handle(AIS_Shape) aShape_tooldir_0;
+    Handle(AIS_Shape) aShape_tooldir_1;
+    Handle(AIS_Shape) aShape_tooldir_connect;
+
+    double g64_p;
+    double g64_q;
 };
 
 struct gcode_shapes {

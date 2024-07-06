@@ -33,7 +33,7 @@ draw_primitives::draw_primitives(){ }
 
 // Draw 3d solids
 Handle(AIS_Shape) draw_primitives::draw_3d_cone(gp_Pnt centerpoint, double bottomdiameter, double topdiameter, double height){
-    gp_Dir axis=gp::DX();
+    gp_Dir axis=gp::DZ();
     gp_Ax2 aplace(centerpoint,axis);
     TopoDS_Shape t_topo_cone = BRepPrimAPI_MakeCone(aplace,bottomdiameter,topdiameter,height).Shape();
     return new AIS_Shape(t_topo_cone);
@@ -759,6 +759,41 @@ Handle(AIS_Shape) draw_primitives::rotate_translate_3d_quaternion(Handle(AIS_Sha
     return shape;
 }
 
+// Function to rotate an AIS_Shape around the x, y, and z axes at the origin and then move to tcp
+Handle(AIS_Shape) draw_primitives::rotate_translate_3d(Handle(AIS_Shape) shape, gp_Pnt tcp, double a, double b, double c) {
+    // Create transformation objects for each axis
+    gp_Trsf trsf_x, trsf_y, trsf_z;
+
+    // Set rotation for x-axis
+    trsf_x.SetRotation(gp_Ax1(tcp, gp_Dir(1, 0, 0)), a);
+
+    // Set rotation for y-axis
+    trsf_y.SetRotation(gp_Ax1(tcp, gp_Dir(0, 1, 0)), b);
+
+    // Set rotation for z-axis
+    trsf_z.SetRotation(gp_Ax1(tcp, gp_Dir(0, 0, 1)), c);
+
+    // Initialize the final transformation
+    gp_Trsf trsf;
+
+    // Apply rotations in the correct order: a, b, c
+    trsf.Multiply(trsf_x);
+    trsf.Multiply(trsf_y);
+    trsf.Multiply(trsf_z);
+
+    // Create a translation transformation to move to tcp
+    gp_Trsf move;
+    move.SetTranslation(gp_Vec(gp_Pnt(0, 0, 0), tcp));
+
+    // Apply the translation after the rotations
+    trsf.Multiply(move);
+
+    // Apply the transformation to the shape
+    shape->SetLocalTransformation(trsf);
+
+    return shape;
+}
+
 Handle(AIS_Shape) draw_primitives::translate_3d(Handle(AIS_Shape) shape, gp_Pnt current, gp_Pnt target){
     gp_Trsf trsf;
     trsf.SetTranslation(current,target);
@@ -791,6 +826,44 @@ Handle(AIS_Shape) draw_primitives::draw_3d_line(const gp_Pnt &p0, const gp_Pnt &
     }
     TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(p0,p1);
     return new AIS_Shape(edge);
+}
+
+Handle(AIS_Shape) draw_primitives::draw_3d_line_vector(const gp_Pnt &p0, const double &length, const double &a, const double &b, const double &c, gp_Pnt &pi) {
+    // Create rotation transformations around x and y axes
+    //    gp_Trsf trsfX, trsfY;
+    //    trsfX.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), gp_Dir(1, 0, 0)), a);
+    //    trsfY.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), gp_Dir(0, 1, 0)), b);
+
+    //    // Define direction vector in global coordinate system
+    //    gp_Vec direction(0, 0, length);  // Line direction along Z-axis initially
+
+    //    // Rotate direction vector using trsfX (around x-axis)
+    //    direction.Transform(trsfX);
+
+    //    // Rotate direction vector using trsfY (around y-axis)
+    //    direction.Transform(trsfY);
+
+    //    // Compute endpoint p1
+    //    pi = p0.Translated(direction);
+
+    //    // Create a geometric line from p0 to p1
+    //    gp_Ax1 axis(p0, gp_Dir(direction));  // Axis of the line from p0 in direction of p1
+    //    Handle(Geom_Line) lineGeom = new Geom_Line(axis);
+
+    //    // Create an edge (line segment) from p0 to p1
+    //    BRepBuilderAPI_MakeEdge edgeMaker(lineGeom, p0, pi);
+    //    TopoDS_Edge edge = edgeMaker.Edge();
+
+    //    // Create AIS_Shape for visualization
+    //    Handle(AIS_Shape) shape = new AIS_Shape(edge);
+
+    Handle(AIS_Shape) aShape=draw_3d_line({0,0,0},{0,0,length});
+    aShape=rotate_translate_3d(aShape,p0,a,b,c);
+
+    gp_Pnt p;
+    get_transformed_line_points(aShape,p,pi);
+
+    return aShape;
 }
 
 Handle(AIS_Shape) draw_primitives::draw_3d_line_wire(std::vector<gp_Pnt> pvec){
@@ -2792,6 +2865,141 @@ int draw_primitives::get_3d_fillet_start_end_point(const gp_Pnt &p0, gp_Pnt &p1,
         p4=pw1;
     }
     return 1;
+}
+
+Handle(AIS_Shape) draw_primitives::draw_3d_line_wire_low_memory_usage(const std::vector<gp_Pnt>& pvec){
+    // Check if the input vector is empty
+    if (pvec.empty()) {
+        std::cerr << "Error: The input vector is empty." << std::endl;
+        return draw_3d_point({0,0,0});
+    }
+
+    // Create an array of points from the input vector
+    TColgp_Array1OfPnt array(1, static_cast<Standard_Integer>(pvec.size()));
+    for (Standard_Integer i = 1; i <= pvec.size(); ++i) {
+        array.SetValue(i, pvec[i - 1]);
+    }
+
+    // Create a polygon from the array of points
+    Handle(Poly_Polygon3D) aPolygon = new Poly_Polygon3D(array);
+
+    // Create a new shape with the updated polygon
+    TopoDS_Shape resultShape;
+    BRep_Builder brepBuilder;
+    TopoDS_Edge edge;
+    brepBuilder.MakeEdge(edge, aPolygon);
+    resultShape = edge;
+
+    // Create an AIS_Shape to visualize the result
+    Handle(AIS_Shape) aShape = new AIS_Shape(resultShape);
+
+    return aShape;
+}
+
+Handle(AIS_Shape) draw_primitives::draw_3d_line_wire_low_memory_usage(const std::vector<gp_Pnt>& pvec, Handle(AIS_Shape) existingShape) {
+    if (pvec.empty()) {
+        std::cerr << "Error: The input vector is empty." << std::endl;
+        return draw_3d_point({0,0,0});
+    }
+
+    TColgp_Array1OfPnt array(1, static_cast<Standard_Integer>(pvec.size()));
+    for (Standard_Integer i = 1; i <= pvec.size(); ++i) {
+        array.SetValue(i, pvec[i - 1]);
+    }
+
+    Handle(Poly_Polygon3D) aPolygon = new Poly_Polygon3D(array);
+
+    TopoDS_Shape resultShape;
+    BRep_Builder brepBuilder;
+    TopoDS_Edge edge;
+    if (existingShape.IsNull()) {
+        brepBuilder.MakeEdge(edge, aPolygon);
+        resultShape = edge;
+    } else {
+        TopoDS_Edge existingEdge = TopoDS::Edge(existingShape->Shape());
+        brepBuilder.UpdateEdge(existingEdge, aPolygon);
+        resultShape = existingEdge;
+    }
+
+    if (existingShape.IsNull()) {
+        return new AIS_Shape(resultShape);
+    } else {
+        existingShape->Set(resultShape);
+        return existingShape;
+    }
+}
+
+void draw_primitives::get_transformed_line_points(Handle(AIS_Shape) aShape, gp_Pnt &p0, gp_Pnt &p1){
+
+    // Get the shape from AIS_Shape
+    TopoDS_Shape shape = aShape->Shape();
+
+    // Get the edge and its geometry
+    TopoDS_Edge edge = TopoDS::Edge(shape);
+
+    // Get the local transformation of the edge
+    gp_Trsf localTransformation = aShape->LocalTransformation();
+
+    // Retrieve the geometry of the edge after applying the local transformation
+    Standard_Real first, last;
+    Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, first, last);
+
+    // Get the transformed endpoints of the curve
+    p0 = curve->Value(first).Transformed(localTransformation);
+    p1 = curve->Value(last).Transformed(localTransformation);
+}
+
+std::vector<gp_Pnt> draw_primitives::record_tooldir_path_line(gp_Pnt p0, gp_Pnt p1,
+                                                              gp_Pnt abc0,
+                                                              gp_Pnt abc1,
+                                                              double tp_height){
+
+    std::vector<gp_Pnt> pvec={};
+    gp_Pnt pi, abci, p, ta;
+
+    for(double i=0; i<1; i+=0.1){
+        std::cout<<"i:"<<i<<std::endl;
+        interpolate_point_on_line(p0,p1,i,pi); // i=0-1
+        interpolate_point_on_line(abc0,abc1,i,abci);
+
+        Handle(AIS_Shape) aShape=draw_3d_line({0,0,0},{0,0,tp_height});
+        aShape=rotate_translate_3d(aShape,pi,abci.X(),abci.Y(),abci.Z());
+        get_transformed_line_points(aShape,p,ta);
+
+        if(i==0){
+            pvec.push_back(ta);
+        }
+        if(pvec.size()>0 && pvec.back().Distance(ta)>0.001){
+            pvec.push_back(ta);
+        }
+    }
+    return pvec;
+}
+
+std::vector<gp_Pnt> draw_primitives::record_tooldir_path_arc(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1,
+                                                             const gp_Pnt &abc0,
+                                                             const gp_Pnt &abc1,
+                                                             const double tp_height){
+
+    std::vector<gp_Pnt> pvec={};
+    gp_Pnt pi, abci, p, ta;
+
+    for(double i=0; i<1; i+=0.1){
+        interpolate_point_on_arc(p0,pw,p1,i,pi);
+        interpolate_point_on_line(abc0,abc1,i,abci);
+
+        Handle(AIS_Shape) aShape=draw_3d_line({0,0,0},{0,0,tp_height});
+        aShape=rotate_translate_3d(aShape,pi,abci.X(),abci.Y(),abci.Z());
+        get_transformed_line_points(aShape,p,ta);
+
+        if(i==0){
+            pvec.push_back(ta);
+        }
+        if(pvec.size()>0 && pvec.back().Distance(ta)>0.001){
+            pvec.push_back(ta);
+        }
+    }
+    return pvec;
 }
 
 /*
