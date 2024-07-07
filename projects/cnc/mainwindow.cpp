@@ -42,6 +42,25 @@ MainWindow::MainWindow(QWidget *parent)
     //! This activates a screen update when robot is moving and screen needs to be updated automaticly.
     connect(timer, &QTimer::timeout, this, &MainWindow::update);
     timer->start(20);
+
+
+    gp_Pnt p0={50,50,50};
+    gp_Pnt p2={75,75,60};
+    gp_Pnt p1=draw_primitives::get_line_midpoint(p0,p2);
+    occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line(p0,p2),Quantity_NOC_ALICEBLUE,0));
+
+
+    gp_Pnt p3={100,100,60};
+    gp_Pnt p5={120,80,40};
+    gp_Pnt p4=draw_primitives::get_line_midpoint(p3,p5);
+    occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line(p3,p5),Quantity_NOC_ALICEBLUE,0));
+
+    std::vector<gp_Pnt> pvec0,pvec1,pvec2;
+    draw_clothoids::draw_inbetween_3d_clothoid_3arc_G2_non_planar(p0,p1,p2,p3,p4,p5,pvec0,pvec1,pvec2);
+    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec0));
+    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec1));
+    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec2));
+
 }
 
 MainWindow::~MainWindow()

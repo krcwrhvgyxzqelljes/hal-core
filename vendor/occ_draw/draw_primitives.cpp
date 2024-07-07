@@ -2508,7 +2508,7 @@ Handle(AIS_Shape) draw_primitives::downcast(Handle(AIS_InteractiveObject) intera
 }
 
 // Function to calculate the angle of a vector with respect to the x-axis
-double draw_primitives::get_2d_arc_end_angle(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
+double draw_primitives::get_2d_arc_end_angle_xy(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
     // Calculate the arc center (pc)
     double x0 = p0.X(), y0 = p0.Y();
     double xw = pw.X(), yw = pw.Y();
@@ -2524,8 +2524,25 @@ double draw_primitives::get_2d_arc_end_angle(const gp_Pnt& p0, const gp_Pnt& pw,
     return atan2(pc_y - p1.Y(), pc_x - p1.X());
 }
 
+// Function to calculate the angle of a vector with respect to the x-axis
+double draw_primitives::get_2d_arc_end_angle_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
+    // Calculate the arc center (pc)
+    double x0 = p0.X(), z0 = p0.Z();
+    double xw = pw.X(), zw = pw.Z();
+    double x1 = p1.X(), z1 = p1.Z();
+
+    double A1 = xw - x0, B1 = zw - z0, C1 = (xw*xw + zw*zw - x0*x0 - z0*z0) / 2.0;
+    double A2 = x1 - xw, B2 = z1 - zw, C2 = (x1*x1 + z1*z1 - xw*xw - zw*zw) / 2.0;
+
+    double pc_x = (C1*B2 - C2*B1) / (A1*B2 - A2*B1);
+    double pc_z = (A1*C2 - A2*C1) / (A1*B2 - A2*B1);
+
+    // Calculate the angle of the direction vector with respect to the x-axis
+    return atan2(pc_z - p1.Z(), pc_x - p1.X());
+}
+
 // Function to calculate the angle of the arc's circumference at the start
-double draw_primitives::get_2d_arc_start_angle(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
+double draw_primitives::get_2d_arc_start_angle_xy(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
     // Calculate the arc center (pc)
     double x0 = p0.X(), y0 = p0.Y();
     double xw = pw.X(), yw = pw.Y();
@@ -2541,8 +2558,25 @@ double draw_primitives::get_2d_arc_start_angle(const gp_Pnt& p0, const gp_Pnt& p
     return atan2(p0.Y() - pc_y, p0.X() - pc_x);
 }
 
+// Function to calculate the angle of the arc's circumference at the start
+double draw_primitives::get_2d_arc_start_angle_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
+    // Calculate the arc center (pc)
+    double x0 = p0.X(), z0 = p0.Z();
+    double xw = pw.X(), zw = pw.Z();
+    double x1 = p1.X(), z1 = p1.Z();
+
+    double A1 = xw - x0, B1 = zw - z0, C1 = (xw*xw + zw*zw - x0*x0 - z0*z0) / 2.0;
+    double A2 = x1 - xw, B2 = z1 - zw, C2 = (x1*x1 + z1*z1 - xw*xw - zw*zw) / 2.0;
+
+    double pc_x = (C1*B2 - C2*B1) / (A1*B2 - A2*B1);
+    double pc_z = (A1*C2 - A2*C1) / (A1*B2 - A2*B1);
+
+    // Calculate the angle of the direction vector with respect to the x-axis
+    return atan2(p0.Z() - pc_z, p0.X() - pc_x);
+}
+
 // Function to determine if an arc is clockwise (CW) or counterclockwise (CCW)
-int draw_primitives::get_2d_arc_direction(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
+int draw_primitives::get_2d_arc_direction_xy(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
     // Calculate vectors from p0 to pw and from p0 to p1
     double vector1_x = pw.X() - p0.X();
     double vector1_y = pw.Y() - p0.Y();
@@ -2562,15 +2596,43 @@ int draw_primitives::get_2d_arc_direction(const gp_Pnt& p0, const gp_Pnt& pw, co
     }
 }
 
+// Function to determine if an arc is clockwise (CW) or counterclockwise (CCW)
+int draw_primitives::get_2d_arc_direction_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
+    // Calculate vectors from p0 to pw and from p0 to p1
+    double vector1_x = pw.X() - p0.X();
+    double vector1_z = pw.Z() - p0.Z();
+    double vector2_x = p1.X() - p0.X();
+    double vector2_z = p1.Z() - p0.Z();
+
+    // Calculate the cross product of the vectors
+    double crossProduct = vector1_x * vector2_z - vector1_z * vector2_x;
+
+    // Determine the direction based on the sign of the cross product
+    if (crossProduct > 0) {
+        return 1; // Counterclockwise (CCW)
+    } else if (crossProduct < 0) {
+        return -1; // Clockwise (CW)
+    } else {
+        return 0; // The points are collinear
+    }
+}
+
 // Function to calculate the angle of a direction vector
-double draw_primitives::get_2d_line_angle(const gp_Pnt& p1, const gp_Pnt& p2) {
+double draw_primitives::get_2d_line_angle_xy(const gp_Pnt& p1, const gp_Pnt& p2) {
     double dx = p2.X() - p1.X();
     double dy = p2.Y() - p1.Y();
     return atan2(dy, dx);
 }
 
+// Function to calculate the angle of a direction vector
+double draw_primitives::get_2d_line_angle_xz(const gp_Pnt& p1, const gp_Pnt& p2) {
+    double dx = p2.X() - p1.X();
+    double dz = p2.Z() - p1.Z();
+    return atan2(dz, dx);
+}
+
 // Function to calculate the angle of the arc's circumference at the start
-double draw_primitives::get_2d_arc_radius(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
+double draw_primitives::get_2d_arc_radius_xy(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
     // Calculate the arc center (pc)
     double x0 = p0.X(), y0 = p0.Y();
     double xw = pw.X(), yw = pw.Y();
@@ -2583,6 +2645,23 @@ double draw_primitives::get_2d_arc_radius(const gp_Pnt& p0, const gp_Pnt& pw, co
     double pc_y = (A1*C2 - A2*C1) / (A1*B2 - A2*B1);
 
     gp_Pnt pc={pc_x,pc_y,0};
+    return draw_primitives().get_line_lenght(p0,pc);
+}
+
+// Function to calculate the angle of the arc's circumference at the start
+double draw_primitives::get_2d_arc_radius_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1) {
+    // Calculate the arc center (pc)
+    double x0 = p0.X(), z0 = p0.Z();
+    double xw = pw.X(), zw = pw.Z();
+    double x1 = p1.X(), z1 = p1.Z();
+
+    double A1 = xw - x0, B1 = zw - z0, C1 = (xw*xw + zw*zw - x0*x0 - z0*z0) / 2.0;
+    double A2 = x1 - xw, B2 = z1 - zw, C2 = (x1*x1 + z1*z1 - xw*xw - zw*zw) / 2.0;
+
+    double pc_x = (C1*B2 - C2*B1) / (A1*B2 - A2*B1);
+    double pc_z = (A1*C2 - A2*C1) / (A1*B2 - A2*B1);
+
+    gp_Pnt pc={pc_x,0,pc_z};
     return draw_primitives().get_line_lenght(p0,pc);
 }
 
