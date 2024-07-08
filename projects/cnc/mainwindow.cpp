@@ -43,23 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(timer, &QTimer::timeout, this, &MainWindow::update);
     timer->start(20);
 
-
-    gp_Pnt p0={50,50,50};
-    gp_Pnt p2={75,75,60};
-    gp_Pnt p1=draw_primitives::get_line_midpoint(p0,p2);
-    occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line(p0,p2),Quantity_NOC_ALICEBLUE,0));
-
-
-    gp_Pnt p3={100,100,60};
-    gp_Pnt p5={120,80,40};
-    gp_Pnt p4=draw_primitives::get_line_midpoint(p3,p5);
-    occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line(p3,p5),Quantity_NOC_ALICEBLUE,0));
-
-    std::vector<gp_Pnt> pvec0,pvec1,pvec2;
-    draw_clothoids::draw_inbetween_3d_clothoid_3arc_G2_non_planar(p0,p1,p2,p3,p4,p5,pvec0,pvec1,pvec2);
-    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec0));
-    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec1));
-    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec2));
+    clothoid_test();
 
 }
 
@@ -68,6 +52,129 @@ MainWindow::~MainWindow()
     hal->exit();
     shm->detach_shared_memory();
     delete ui;
+}
+
+#include <GeomAPI_Interpolate.hxx>
+#include <Geom_BSplineCurve.hxx>
+#include <TColgp_HArray1OfPnt.hxx>
+#include <gp_Pnt.hxx>
+#include <Precision.hxx>
+#include <iostream>
+
+// Function to interpolate between points with a B-spline curve
+Handle(Geom_BSplineCurve) interpolatePoints(const std::vector<gp_Pnt>& points, bool periodicFlag, double tolerance) {
+    // Create handle to array of points
+    Handle(TColgp_HArray1OfPnt) arrayPoints = new TColgp_HArray1OfPnt(1, static_cast<Standard_Integer>(points.size()));
+    for (size_t i = 0; i < points.size(); ++i) {
+        arrayPoints->SetValue(i + 1, points[i]);
+    }
+
+    // Create GeomAPI_Interpolate object
+    GeomAPI_Interpolate interpolator(arrayPoints, periodicFlag, tolerance);
+
+    // Perform interpolation
+    interpolator.Perform();
+
+    // Check if interpolation was successful
+    if (!interpolator.IsDone()) {
+        std::cerr << "Failed to interpolate points." << std::endl;
+        return nullptr;
+    }
+
+    // Retrieve the interpolated B-spline curve
+    Handle(Geom_BSplineCurve) splineCurve = interpolator.Curve();
+    return splineCurve;
+}
+
+#include <BRepBuilderAPI_MakeEdge.hxx>
+
+void MainWindow::clothoid_test(){
+
+    occ->clear_shapevec();
+
+    // Draw first line.
+    gp_Pnt p0={10,10,0};
+    gp_Pnt p2={20,20,0};
+    gp_Pnt p1=draw_primitives::get_line_midpoint(p0,p2);
+    occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line(p0,p2),Quantity_NOC_ALICEBLUE,0));
+
+    // Draw second line.
+    gp_Pnt p3={ui->spinBox_l0_x->value(),ui->spinBox_l0_y->value(),ui->spinBox_l0_z->value()};
+    gp_Pnt p5={ui->spinBox_l1_x->value(),ui->spinBox_l1_y->value(),ui->spinBox_l1_z->value()};
+    gp_Pnt p4=draw_primitives::get_line_midpoint(p3,p5);
+    occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line(p3,p5),Quantity_NOC_ALICEBLUE,0));
+
+    // Construct 3d clothoid.
+    // pvec0 = projection on xy plane.
+    // pvec1 = projection on xz plane.
+    // pvec2 = projection 3d.
+    int segments=100;
+    std::vector<gp_Pnt> pvec0,pvec1,pvec2,pvec3;
+    draw_clothoids::draw_inbetween_3d_clothoid_3arc_G2_non_planar(p0,p1,p2,p3,p4,p5,segments,pvec0,pvec1,pvec2,pvec3);
+    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec0));
+    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec1));
+    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec2));
+    occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage(pvec3));
+
+    // draw boundairy box.
+    double xmin=-INFINITY,xmax=INFINITY;
+    double ymin=-INFINITY,ymax=INFINITY;
+    double zmin=-INFINITY,zmax=INFINITY;
+
+    for(uint i=0; i<pvec0.size(); i++){
+        if(pvec0[i].X()>xmin){
+            xmin=pvec0[i].X();
+        }
+        if(pvec0[i].X()<xmax){
+            xmax=pvec0[i].X();
+        }
+        if(pvec0[i].Y()>ymin){
+            ymin=pvec0[i].Y();
+        }
+        if(pvec0[i].Y()<ymax){
+            ymax=pvec0[i].Y();
+        }
+    }
+    for(uint i=0; i<pvec1.size(); i++){
+        if(pvec1[i].Z()>zmin){
+            zmin=pvec1[i].Z();
+        }
+        if(pvec1[i].Z()<zmax){
+            zmax=pvec1[i].Z();
+        }
+    }
+
+    Handle(AIS_Shape) aShape=draw_primitives::draw_3d_box(xmax-xmin,ymax-ymin,zmax-zmin);
+    aShape=draw_primitives::translate_3d(aShape,{0,0,0},{xmin,ymin,zmin});
+    aShape=draw_primitives::colorize(aShape,Quantity_NOC_ALICEBLUE,0.95);
+    occ->add_shapevec( aShape );
+
+    // Interpolate the points with a B-spline curve
+
+    gp_Pnt pi0, pi1;
+    draw_primitives::interpolate_point_on_line(p0,p2,0.95,pi0);
+    draw_primitives::interpolate_point_on_line(p3,p5,0.05,pi1);
+
+    occ->add_shapevec( draw_primitives::draw_3d_point(pvec3[int(pvec3.size()*0.5)]) );
+
+
+    Handle(Geom_BSplineCurve) spline = interpolatePoints({pi0, p2, p3, pi1}, false, Precision::Approximation());
+
+    // Create an edge from the B-spline curve
+    BRepBuilderAPI_MakeEdge edgeMaker(spline);
+    TopoDS_Edge edge = edgeMaker.Edge();
+
+
+
+    // Create an AIS_Shape for the edge
+    Handle(AIS_Shape) aisShape = new AIS_Shape(edge);
+
+    // Setup the AIS_Shape (optional)
+    aisShape->SetColor(Quantity_NOC_GREEN); // Set color to red
+
+    // Add the shape to the interactive context (occ is your AIS_InteractiveContext)
+    occ->add_shapevec( aisShape);
+
 }
 
 void MainWindow::update(){
@@ -308,17 +415,17 @@ void MainWindow::on_toolButton_to_lower_letters_pressed()
 void MainWindow::on_toolButton_scope_toggled(bool checked)
 {
     if(checked){
-          ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(3);
+        ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(3);
     } else {
 
         if(mode==MANUAL){
-             ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(0);
+            ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(0);
         }
         if(mode==AUTO){
-             ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(1);
+            ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(1);
         }
         if(mode==MDI){
-             ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(2);
+            ui->stackedWidget_mode_manual_auto_mdi->setCurrentIndex(2);
         }
     }
 }
@@ -326,5 +433,35 @@ void MainWindow::on_toolButton_scope_toggled(bool checked)
 void MainWindow::on_toolButton_clear_toolpath_pressed()
 {
     occ->clear_toolpath();
+}
+
+void MainWindow::on_spinBox_l0_x_valueChanged(int arg1)
+{
+    clothoid_test();
+}
+
+void MainWindow::on_spinBox_l0_y_valueChanged(int arg1)
+{
+    clothoid_test();
+}
+
+void MainWindow::on_spinBox_l0_z_valueChanged(int arg1)
+{
+    clothoid_test();
+}
+
+void MainWindow::on_spinBox_l1_x_valueChanged(int arg1)
+{
+    clothoid_test();
+}
+
+void MainWindow::on_spinBox_l1_y_valueChanged(int arg1)
+{
+    clothoid_test();
+}
+
+void MainWindow::on_spinBox_l1_z_valueChanged(int arg1)
+{
+    clothoid_test();
 }
 

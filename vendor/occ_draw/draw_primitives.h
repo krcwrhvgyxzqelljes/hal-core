@@ -253,14 +253,19 @@ public:
     // 2d operations for clothoids.
     static double get_2d_line_angle_xy(const gp_Pnt& p1, const gp_Pnt& p2);
     static double get_2d_line_angle_xz(const gp_Pnt& p1, const gp_Pnt& p2);
+    static double get_2d_line_angle_yz(const gp_Pnt& p1, const gp_Pnt& p2);
     static double get_2d_arc_end_angle_xy(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static double get_2d_arc_end_angle_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
+    static double get_2d_arc_end_angle_yz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static double get_2d_arc_start_angle_xy(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
-     static double get_2d_arc_start_angle_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
+    static double get_2d_arc_start_angle_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
+    static double get_2d_arc_start_angle_yz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static int get_2d_arc_direction_xy(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static int get_2d_arc_direction_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
+    static int get_2d_arc_direction_yz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static double get_2d_arc_radius_xy(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static double get_2d_arc_radius_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
+    static double get_2d_arc_radius_yz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static int get_lines_colinear(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& p2, const gp_Pnt& p3);
 
     static gp_Pln create_top_view_plane();
