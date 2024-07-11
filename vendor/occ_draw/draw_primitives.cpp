@@ -869,7 +869,7 @@ Handle(AIS_Shape) draw_primitives::draw_3d_line_vector(const gp_Pnt &p0, const d
 Handle(AIS_Shape) draw_primitives::draw_3d_line_wire(std::vector<gp_Pnt> pvec){
 
     if(pvec.size()==0){
-        return nullptr;
+        return draw_3d_point({0,0,0});
     }
 
     // std::cout<<"drawing line wire pvec size:"<<pvec.size()<<std::endl;
@@ -3086,6 +3086,87 @@ Handle(AIS_Shape) draw_primitives::draw_3d_line_wire_low_memory_usage(const std:
     }
 }
 
+Handle(AIS_Shape) draw_primitives::draw_3d_spline_degree_3(std::vector<gp_Pnt> pvec){
+
+    bool periodicFlag=false;
+    double tolerance=Precision::Approximation();
+
+    // Create handle to array of points
+    Handle(TColgp_HArray1OfPnt) arrayPoints = new TColgp_HArray1OfPnt(1, static_cast<Standard_Integer>(pvec.size()));
+    for (size_t i = 0; i < pvec.size(); ++i) {
+        arrayPoints->SetValue(i + 1, pvec[i]);
+    }
+
+    // Create GeomAPI_Interpolate object
+    GeomAPI_Interpolate interpolator(arrayPoints, periodicFlag, tolerance);
+
+    // Perform interpolation
+    interpolator.Perform();
+
+    // Check if interpolation was successful
+    if (!interpolator.IsDone()) {
+        std::cerr << "Failed to interpolate points." << std::endl;
+        return nullptr;
+    }
+
+    // Retrieve the interpolated B-spline curve
+    Handle(Geom_BSplineCurve) spline = interpolator.Curve();
+
+    // Create an edge from the B-spline curve
+    BRepBuilderAPI_MakeEdge edgeMaker(spline);
+    TopoDS_Edge edge = edgeMaker.Edge();
+
+    // Create an AIS_Shape for the edge
+    return new AIS_Shape(edge);
+}
+
+void draw_primitives::interpolate_point_on_spline_degree_3(const std::vector<gp_Pnt>& pvec, double progress, gp_Pnt &pi) {
+    // Clamp progress between 0 and 1
+    progress = std::max(0.0, std::min(1.0, progress));
+
+    // Check if there are enough points for interpolation
+    if (pvec.size() < 2) {
+        std::cerr << "Spline has invalid input parameters." << std::endl;
+        pi = gp_Pnt(0, 0, 0); // Default point if input is invalid
+        return;
+    }
+
+    bool periodicFlag = false;
+    double tolerance = Precision::Approximation();
+
+    // Create handle to array of points
+    Handle(TColgp_HArray1OfPnt) arrayPoints = new TColgp_HArray1OfPnt(1, static_cast<Standard_Integer>(pvec.size()));
+    for (size_t i = 0; i < pvec.size(); ++i) {
+        arrayPoints->SetValue(i + 1, pvec[i]);
+    }
+
+    // Create GeomAPI_Interpolate object
+    GeomAPI_Interpolate interpolator(arrayPoints, periodicFlag, tolerance);
+
+    // Perform interpolation
+    interpolator.Perform();
+
+    // Check if interpolation was successful
+    if (!interpolator.IsDone()) {
+        std::cerr << "Spline failed to interpolate points." << std::endl;
+        pi = gp_Pnt(0, 0, 0); // Default point if interpolation fails
+        return;
+    }
+
+    // Retrieve the interpolated B-spline curve
+    Handle(Geom_BSplineCurve) spline = interpolator.Curve();
+
+    // Get the parameter range of the curve
+    Standard_Real first = spline->FirstParameter();
+    Standard_Real last = spline->LastParameter();
+
+    // Calculate the parameter value corresponding to the progress
+    Standard_Real parameter = first + progress * (last - first);
+
+    // Evaluate the point on the curve at the calculated parameter value
+    spline->D0(parameter, pi);
+}
+
 void draw_primitives::get_transformed_line_points(Handle(AIS_Shape) aShape, gp_Pnt &p0, gp_Pnt &p1){
 
     // Get the shape from AIS_Shape
@@ -3107,76 +3188,155 @@ void draw_primitives::get_transformed_line_points(Handle(AIS_Shape) aShape, gp_P
 }
 
 std::vector<gp_Pnt> draw_primitives::record_tooldir_path_line(gp_Pnt p0, gp_Pnt p1,
-                                                              gp_Pnt abc0,
-                                                              gp_Pnt abc1,
-                                                              double tp_height){
+                                                             gp_Pnt abc0, gp_Pnt abc1,
+                                                             double tp_height) {
 
-    std::vector<gp_Pnt> pvec={};
+    std::vector<gp_Pnt> pvec;
     gp_Pnt pi, abci, p, ta;
 
-    for(double i=0; i<1; i+=0.1){
-        std::cout<<"i:"<<i<<std::endl;
-        interpolate_point_on_line(p0,p1,i,pi); // i=0-1
-        interpolate_point_on_line(abc0,abc1,i,abci);
+    const int num_cycles = 100;  // Number of interpolation cycles
+    const double min_distance = 0.5;  // Minimum distance between points to be added to the vector
 
-        Handle(AIS_Shape) aShape=draw_3d_line({0,0,0},{0,0,tp_height});
-        aShape=rotate_translate_3d(aShape,pi,abci.X(),abci.Y(),abci.Z());
-        get_transformed_line_points(aShape,p,ta);
+    for (int i = 0; i <= num_cycles; ++i) {
+        double t = static_cast<double>(i) / num_cycles;
 
-        if(i==0){
+        // Interpolate points on the line and along the auxiliary line
+        interpolate_point_on_line(p0, p1, t, pi);
+        interpolate_point_on_line(abc0, abc1, t, abci);
+
+        // Create a shape and transform it
+        Handle(AIS_Shape) aShape = draw_3d_line({0, 0, 0}, {0, 0, tp_height});
+        aShape = rotate_translate_3d(aShape, pi, abci.X(), abci.Y(), abci.Z());
+        get_transformed_line_points(aShape, p, ta);
+
+        // Always add the first point
+        if (pvec.empty()) {
             pvec.push_back(ta);
-        }
-        if(pvec.size()>0 && pvec.back().Distance(ta)>0.001){
-            pvec.push_back(ta);
+        } else {
+            // Add points to the vector if the distance condition is met
+            if (pvec.back().Distance(ta) > min_distance) {
+                pvec.push_back(ta);
+            }
         }
     }
+
+    // Ensure the last point is added
+    if (!pvec.empty()) {
+        pvec.push_back(ta);  // Add the last generated point to pvec
+    }
+
     return pvec;
 }
 
 std::vector<gp_Pnt> draw_primitives::record_tooldir_path_arc(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1,
-                                                             const gp_Pnt &abc0,
-                                                             const gp_Pnt &abc1,
-                                                             const double tp_height){
-
-    std::vector<gp_Pnt> pvec={};
+                                                             const gp_Pnt &abc0, const gp_Pnt &abc1,
+                                                             const double tp_height) {
+    std::vector<gp_Pnt> pvec;
     gp_Pnt pi, abci, p, ta;
 
-    for(double i=0; i<1; i+=0.1){
-        interpolate_point_on_arc(p0,pw,p1,i,pi);
-        interpolate_point_on_line(abc0,abc1,i,abci);
+    const int num_cycles = 100;  // Number of interpolation cycles
+    const double min_distance = 0.5;  // Minimum distance between points to be added to the vector
 
-        Handle(AIS_Shape) aShape=draw_3d_line({0,0,0},{0,0,tp_height});
-        aShape=rotate_translate_3d(aShape,pi,abci.X(),abci.Y(),abci.Z());
-        get_transformed_line_points(aShape,p,ta);
+    for (int i = 0; i <= num_cycles; ++i) {
+        double t = static_cast<double>(i) / num_cycles;
 
-        if(i==0){
+        // Interpolate points on the arc and line
+        interpolate_point_on_arc(p0, pw, p1, t, pi);
+        interpolate_point_on_line(abc0, abc1, t, abci);
+
+        // Create a shape and transform it
+        Handle(AIS_Shape) aShape = draw_3d_line({0, 0, 0}, {0, 0, tp_height});
+        aShape = rotate_translate_3d(aShape, pi, abci.X(), abci.Y(), abci.Z());
+
+        // Get transformed points
+        get_transformed_line_points(aShape, p, ta);
+
+        // Always add the first point
+        if (pvec.empty()) {
             pvec.push_back(ta);
-        }
-        if(pvec.size()>0 && pvec.back().Distance(ta)>0.001){
-            pvec.push_back(ta);
+        } else {
+            // Add points to the vector if the distance condition is met
+            if (pvec.back().Distance(ta) > min_distance) {
+                pvec.push_back(ta);
+            }
         }
     }
+
+    // Ensure the last point is added
+    if (!pvec.empty()) {
+        pvec.push_back(ta);  // Add the last generated point to pvec
+    }
+
     return pvec;
 }
 
-/*
-void sample_loading_huge_files(){ https://github.com/gkv311/occt-samples-qopenglwidget/issues/2
+std::vector<gp_Pnt> draw_primitives::trim_recorded_tooldir_path_line_both_sides(const std::vector<gp_Pnt>& pvec, double trim_dist) {
+    // Calculate total length of the curve
+    double totalLength = 0.0;
+    std::vector<gp_Pnt> trimmedPath;
 
-    //! Basic impementation example:
-     TopoDS_Shape ResultShape;
-     TColgp_Array1OfPnt array (1,5); // sizing array
-     array.SetValue(1,gp_Pnt(100,0,0));
-     array.SetValue(2,gp_Pnt(1000,0,0));
-     array.SetValue(3,gp_Pnt(1000,500,0));
-     array.SetValue(4,gp_Pnt(100,500,0));
-     array.SetValue(5,gp_Pnt(100,0,0));
-     Handle(Poly_Polygon3D) aPolygon = new Poly_Polygon3D(array);
-     BRep_Builder Brep;
-     TopoDS_Edge& E = TopoDS::Edge(ResultShape);
-     Brep.MakeEdge(E,aPolygon);
-     Handle(AIS_Shape) Ashape=new AIS_Shape(ResultShape);
-     m_context->Display(Ashape,Standard_False);
-} */
+    for (size_t i = 0; i < pvec.size() - 1; ++i) {
+        totalLength += pvec[i].Distance(pvec[i + 1]);
+    }
+
+    if ((2 * trim_dist + 1) > totalLength) {
+        trim_dist = (totalLength - 1) / 2;
+    }
+
+    double accumulatedLength = 0.0;
+    bool startFound = false;
+
+    for (size_t i = 0; i < pvec.size() - 1; ++i) {
+        double segmentLength = pvec[i].Distance(pvec[i + 1]);
+        double previousLength = accumulatedLength;
+        accumulatedLength += segmentLength;
+
+        if (accumulatedLength > trim_dist && !startFound) {
+            double remainingLength = trim_dist - previousLength;
+            double progress = remainingLength / segmentLength;
+            gp_Pnt startPoint;
+            interpolate_point_on_line(pvec[i], pvec[i + 1], progress, startPoint);
+            trimmedPath.push_back(startPoint);
+            startFound = true;
+        }
+
+        if (accumulatedLength <= (totalLength - trim_dist) && startFound) {
+            trimmedPath.push_back(pvec[i + 1]);
+        } else if (accumulatedLength > (totalLength - trim_dist) && startFound) {
+            double remainingLength = (totalLength - trim_dist) - previousLength;
+            double progress = remainingLength / segmentLength;
+            gp_Pnt endPoint;
+            interpolate_point_on_line(pvec[i], pvec[i + 1], progress, endPoint);
+            trimmedPath.push_back(endPoint);
+            break;
+        }
+    }
+    return trimmedPath;
+}
+
+void draw_primitives::interpolate_point_on_pvec_path(const std::vector<gp_Pnt>& pvec, const double& pathlength, double progress, gp_Pnt& pi) {
+    // Clamp progress between 0 and 1
+    progress = std::max(0.0, std::min(1.0, progress));
+
+    double li = progress * pathlength;
+    pi = gp_Pnt(0, 0, 0); // Reset.
+
+    double ls = 0, le = 0;
+    for (size_t i = 0; i < pvec.size() - 1; ++i) {
+        double l = pvec[i].Distance(pvec[i + 1]);
+        ls = le;
+        le += l;
+
+        if (le > li) {
+            double local_progress = (li - ls) / l;
+            interpolate_point_on_line(pvec[i], pvec[i + 1], local_progress, pi);
+            return;
+        }
+    }
+
+    // If progress equals or exceeds the path length, return the last point
+    pi = pvec.back();
+}
 
 /*
 // Create B-spline curve from points

@@ -107,11 +107,13 @@ public:
     bool ready();
     void show_shape(Handle(AIS_Shape) aShape);
     void add_shapevec(Handle(AIS_Shape) aShape);
+    void add_shapevectemp(Handle(AIS_Shape) aShape);
     void clear_shapevec();
+    void clear_shapevectemp();
     void remove_shape(Handle(AIS_Shape) aShape);
 
     void update_toolpath(gp_Pnt tp, double tollerance);
-    void update_tooldir(gp_Pnt tp, double tollerance);
+    void update_tooldir(gp_Pnt tp, gp_Pnt abc_pi, double tollerance); // abc_pi is interpolated point by planner.
     gp_Pnt get_tooldir_pnt();
     void clear_toolpath();
 
@@ -128,6 +130,8 @@ public:
 
     //! A bucket containing all shapes.
     std::vector<Handle(AIS_Shape)> aShapeVec;
+    //! Temponairy shapevec.
+    std::vector<Handle(AIS_Shape)> aShapeVecTemp;
 
     Handle(AIS_InteractiveContext) myContext;
 
@@ -166,13 +170,13 @@ private:
     QString myGlInfo;
     bool myIsCoreProfile;
 
-    std::vector<gp_Pnt> tp_toolpath_vec={{0,0,0}};
-    gp_Pnt old_tp_toolpath={0,0,0};
-    Handle(AIS_Shape) tp_toolpath_shape;
+    std::vector<gp_Pnt> path_record_vec={{0,0,0}};
+    gp_Pnt old_path_pnt={0,0,0};
+    Handle(AIS_Shape) path_shape;
 
-    std::vector<gp_Pnt> tp_tooldir_vec={{0,0,15}};
-    gp_Pnt old_tp_tooldir={0,0,15};
-    Handle(AIS_Shape) tp_tooldir_shape;
+    std::vector<gp_Pnt> dirpath_record_vec={{0,0,15}};
+    gp_Pnt old_dir_pnt={0,0,15};
+    Handle(AIS_Shape) dirpath_shape;
 };
 
 #endif // _OcctQtViewer_HeaderFile

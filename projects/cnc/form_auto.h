@@ -27,12 +27,15 @@ public:
                 int &run_from_line);
     void set_run_mode(cnc_run_mode run_mode);
     int load_file=0;
+    double tooldir_fillet=0;
+
+public slots:
+
+    void on_toolButton_reload_pressed();
 
 private slots:
 
-    void on_toolButton_open_pressed();
-
-    void on_toolButton_reload_pressed();
+    void on_toolButton_open_pressed();    
 
     void on_horizontalSlider_auto_velocity_procent_valueChanged(int value);
 
@@ -42,11 +45,14 @@ private slots:
 
     void on_toolButton_stop_pressed();
 
+    void on_doubleSpinBox_tooldir_fillet_valueChanged(double arg1);
+
 private:
 
     Ui::form_auto *ui;
     std::string m_file_name;
     cnc_run_mode m_run_mode;
+    gcode_limits m_gcode_limits;
 };
 
 #endif // FORM_AUTO_H

@@ -177,6 +177,7 @@ inline void load_gcode_from_line(shared_mem_data &shm,int start_line) {
     gcode_parser parser;
     parser.tokenize(file_name, gvec, 0);
     parser.tokens_to_shapes(gvec, svec);
+    parser.optimize_tooldir_path(svec,shm.tooldir_fillet);
 
     // Find the starting point in the shape vector
     int svec_start_nr = 0;
@@ -209,6 +210,12 @@ inline void load_gcode_from_line(shared_mem_data &shm,int start_line) {
     s0.p0 = {shm.scd[0].guipos, shm.scd[1].guipos, shm.scd[2].guipos};
     s0.p1 = {shm.scd[0].guipos, shm.scd[1].guipos, p_start.Z() + 5};
     s0.lenght = s0.p0.Distance(s0.p1);
+
+    s0.abc0={shm.scd[3].guipos, shm.scd[4].guipos, shm.scd[5].guipos}; // Todo add lenght, comparision master move.
+    s0.abc1={0, 0, 0};
+
+    s0.uvw0={shm.scd[6].guipos, shm.scd[7].guipos, shm.scd[8].guipos};
+    s0.uvw1={0, 0, 0};
 
     shape s1;
     s1.g_id = 0;
@@ -253,6 +260,7 @@ inline void load_gcode(shared_mem_data &shm) {
     std::vector<gcode_line> gvec;
     gcode_parser().tokenize(file_name,gvec,0);
     gcode_parser().tokens_to_shapes(gvec, svec);
+    gcode_parser().optimize_tooldir_path(svec,shm.tooldir_fillet);
 
     // Insert rapids from current pos to program startpos.
     shape s0;
@@ -304,6 +312,47 @@ inline void load_gcode(shared_mem_data &shm) {
     std::cout<<"-- gcode ready --"<<std::endl<<std::endl;
 }
 
+//// Function to calculate rotation angles and translation vector
+//inline void calculate_rotation_angles(const gp_Pnt& p0, const gp_Pnt& p1, double &a, double &b, double &c) {
+//    gp_Vec translation(p0, p1);
+
+//    // Normalize the direction vector using OpenCASCADE's gp_Vec method
+//    if (translation.Magnitude() == 0) {
+//        a = b = c = 0;
+//        return;
+//    }
+
+//    translation.Normalize();
+
+//    double dx = translation.X();
+//    double dy = translation.Y();
+//    double dz = translation.Z();
+
+//    // Calculate the angles (assuming a simple model where rotations are around global axes)
+//    a = std::atan2(dy, dz);  // Rotation around x-axis
+//    b = std::atan2(dx, dz);  // Rotation around y-axis
+//    c = std::atan2(dx, dy);  // Rotation around z-axis
+
+//    a=-a; // Seems that a or x had to be inverted.
+//}
+
+// Function to calculate rotation angles and translation vector
+inline void calculate_rotation_angles_1(const gp_Pnt& p0, const gp_Pnt& p1, double &a, double &b, double &c) {
+    // Create the vector from p0 to p1
+    gp_Vec vec_to(p1.X() - p0.X(), p1.Y() - p0.Y(), p1.Z() - p0.Z());
+
+    // Assuming initial vector along the Z-axis (0, 0, 1)
+    gp_Vec vec_from(0, 0, 1);
+
+    // Get the rotation quaternion from the vectors
+    gp_Quaternion quaternion;
+    quaternion.SetRotation(vec_from, vec_to);
+
+    // Retrieve the Euler angles directly from the quaternion
+    quaternion.GetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+}
+
+gp_Pnt abc_pi;
 inline void handle_auto(shared_mem_data &shm){
 
     if(shm.load_file){
@@ -348,7 +397,7 @@ inline void handle_auto(shared_mem_data &shm){
 
         gp_Pnt abc0=svec[svec_nr].abc0;
         gp_Pnt abc1=svec[svec_nr].abc1;
-        gp_Pnt abc_pi;
+        // gp_Pnt abc_pi;
 
         gp_Pnt uvw0=svec[svec_nr].uvw0;
         gp_Pnt uvw1=svec[svec_nr].uvw1;
@@ -364,11 +413,39 @@ inline void handle_auto(shared_mem_data &shm){
         if(svec[svec_nr].g_id==0 || svec[svec_nr].g_id==1 ){
             draw_primitives::interpolate_point_on_line(p0,p1,progress,pi);
             draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
+            std::cout<<"original angle a:"<<abc_pi.X()<<" b:"<<abc_pi.Y()<<" c:"<<abc_pi.X()<<std::endl;
+            std::cout<<"original x:"<<svec[svec_nr].ta1.X()<<" y:"<<svec[svec_nr].ta1.Y()<<" z:"<<svec[svec_nr].ta1.Z()<<std::endl;
+
+             if(svec[svec_nr].pvec_final_tooldir_path.size()>0){
+                 gp_Pnt ta;
+                 draw_primitives::interpolate_point_on_pvec_path(svec[svec_nr].pvec_final_tooldir_path,svec[svec_nr].tooldir_final_lenght,progress,ta);
+                 double a,b,c;
+                 calculate_rotation_angles_1(pi,ta,a,b,c);
+                 abc_pi={a,b,c};
+                 //std::cout<<"angle a:"<<a<<" b:"<<b<<" c:"<<c<<std::endl;
+                 shm.ta=ta;
+                 std::cout<<"ta x:"<<ta.X()<<" y:"<<ta.Y()<<" z:"<<ta.Z()<<std::endl;
+             }
+
             draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
         }
         if(svec[svec_nr].g_id==2 || svec[svec_nr].g_id==3 ){
             draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress,pi);
             draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
+           std::cout<<"original angle a:"<<abc_pi.X()<<" b:"<<abc_pi.Y()<<" c:"<<abc_pi.X()<<std::endl;
+            std::cout<<"original x:"<<svec[svec_nr].ta1.X()<<" y:"<<svec[svec_nr].ta1.Y()<<" z:"<<svec[svec_nr].ta1.Z()<<std::endl;
+
+            if(svec[svec_nr].pvec_final_tooldir_path.size()>0){
+                gp_Pnt ta;
+                draw_primitives::interpolate_point_on_pvec_path(svec[svec_nr].pvec_final_tooldir_path,svec[svec_nr].tooldir_final_lenght,progress,ta);
+                double a,b,c;
+                calculate_rotation_angles_1(pi,ta,a,b,c);
+                abc_pi={a,b,c};
+                shm.ta=ta;
+                //std::cout<<"angle a:"<<a<<" b:"<<b<<" c:"<<c<<std::endl;
+                std::cout<<"ta x:"<<ta.X()<<" y:"<<ta.Y()<<" z:"<<ta.Z()<<std::endl;
+            }
+
             draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
         }
 

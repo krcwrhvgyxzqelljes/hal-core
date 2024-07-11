@@ -656,6 +656,21 @@ void OcctQtViewer::add_shapevec(Handle(AIS_Shape) aShape){
     myContext->Display(aShape,false);
 }
 
+void OcctQtViewer::add_shapevectemp(Handle(AIS_Shape) aShape){
+
+    if(aShape.IsNull()){
+        return;
+    }
+
+    aShape->Attributes()->SetFaceBoundaryDraw(true);
+    aShape->Attributes()->SetFaceBoundaryAspect(new Prs3d_LineAspect(Quantity_NOC_BLACK, Aspect_TOL_SOLID, 1.));
+    aShape->Attributes()->SetIsoOnTriangulation(true);
+    aShape->Attributes()->SetDisplayMode(AIS_Shaded);
+
+    aShapeVecTemp.push_back(aShape);
+    myContext->Display(aShape,false);
+}
+
 void OcctQtViewer::show_shape(Handle(AIS_Shape) aShape){
     aShape->Attributes()->SetFaceBoundaryDraw(true);
     aShape->Attributes()->SetFaceBoundaryAspect(new Prs3d_LineAspect(Quantity_NOC_BLACK, Aspect_TOL_SOLID, 1.));
@@ -670,6 +685,13 @@ void OcctQtViewer::clear_shapevec(){
         remove_shape(aShapeVec.at(i));
     }
     aShapeVec.clear();
+}
+
+void OcctQtViewer::clear_shapevectemp(){
+    for(uint i=0; i<aShapeVecTemp.size(); i++){
+        remove_shape(aShapeVecTemp.at(i));
+    }
+    aShapeVecTemp.clear();
 }
 
 void OcctQtViewer::create_tp_cone(double diameter, double height){
@@ -705,12 +727,14 @@ gp_Pnt OcctQtViewer::get_tooldir_pnt(){
 }
 
 void OcctQtViewer::clear_toolpath(){
-    tp_toolpath_vec.clear();
-    tp_tooldir_vec.clear();
-    remove_shape(tp_toolpath_shape);
-    remove_shape(tp_tooldir_shape);
-    tp_toolpath_shape=0;
-    tp_tooldir_shape=0;
+    path_record_vec.clear();
+    dirpath_record_vec.clear();
+    remove_shape(path_shape);
+    remove_shape(dirpath_shape);
+    clear_shapevectemp();
+
+    path_shape=0;
+    dirpath_shape=0;
 }
 
 void OcctQtViewer::redraw(){
@@ -740,42 +764,57 @@ void OcctQtViewer::remove_shape(Handle(AIS_Shape) aShape){
     myContext->Remove(aShape, Standard_False);
     //! memory can be released by calling the Nullify() method of the Handle(AIS_Shape) object.
     aShape.Nullify();
+
+    //aShape=0;
 }
 
 void OcctQtViewer::update_toolpath(gp_Pnt tp, double tollerance){
-    if (tp.Distance(old_tp_toolpath) > tollerance) {
-        tp_toolpath_vec.push_back(tp);
-        old_tp_toolpath = tp;
+    if (tp.Distance(old_path_pnt) > tollerance) {
+        path_record_vec.push_back(tp);
+        old_path_pnt = tp;
 
-        if (tp_toolpath_shape.IsNull()) {
-            tp_toolpath_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(tp_toolpath_vec), Quantity_NOC_YELLOW, 0.1);
-            myContext->Display(tp_toolpath_shape, false);
+        if (path_shape.IsNull()) {
+            path_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(path_record_vec), Quantity_NOC_YELLOW, 0.1);
+            myContext->Display(path_shape, false);
             std::cout<<"creating toolpath"<<std::endl;
         } else {
-            tp_toolpath_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(tp_toolpath_vec, tp_toolpath_shape), Quantity_NOC_YELLOW, 0.1);
-            myContext->Redisplay(tp_toolpath_shape, false);
+            path_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(path_record_vec, path_shape), Quantity_NOC_YELLOW, 0.1);
+            myContext->Redisplay(path_shape, false);
             std::cout<<"updating toolpath"<<std::endl;
         }
     }
 }
 
-void OcctQtViewer::update_tooldir(gp_Pnt tp, double tollerance){
-    if (tp.Distance(old_tp_tooldir) > tollerance) {
-        tp_tooldir_vec.push_back(tp);
-        old_tp_tooldir = tp;
+void OcctQtViewer::update_tooldir(gp_Pnt tp, gp_Pnt abc_pi, double tollerance){
+    if (tp.Distance(old_dir_pnt) > tollerance) {
+        dirpath_record_vec.push_back(tp);
+        old_dir_pnt = tp;
 
-        if (tp_tooldir_shape.IsNull()) {
-            tp_tooldir_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(tp_tooldir_vec), Quantity_NOC_BLUE, 0.1);
-            myContext->Display(tp_tooldir_shape, false);
+        if (dirpath_shape.IsNull()) {
+            dirpath_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(dirpath_record_vec), Quantity_NOC_BLUE, 0.1);
+            myContext->Display(dirpath_shape, false);
             // std::cout<<"creating tooldir"<<std::endl;
         } else {
-            tp_tooldir_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(tp_tooldir_vec, tp_tooldir_shape), Quantity_NOC_BLUE, 0.1);
-            myContext->Redisplay(tp_tooldir_shape, false);
+            dirpath_shape = draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(dirpath_record_vec, dirpath_shape), Quantity_NOC_BLUE, 0.1);
+            myContext->Redisplay(dirpath_shape, false);
             // std::cout<<"updating tooldir"<<std::endl;
+        }
+
+        if(path_record_vec.size()>0 && dirpath_record_vec.size()>0){
+            // Axis dir to cone top.
+            Handle(AIS_Shape) aShape=draw_primitives::draw_3d_line(path_record_vec.back(),tp);
+            aShape=draw_primitives::colorize(aShape,Quantity_NOC_BURLYWOOD,0.9);
+            aShapeVecTemp.push_back(aShape);
+            myContext->Display(aShapeVecTemp.back(), false);
+
+            // Axis dir to interpolated dirpath.
+            aShape=draw_primitives::draw_3d_line(tp,abc_pi);
+            aShape=draw_primitives::colorize(aShape,Quantity_NOC_BLUE,0.9);
+            aShapeVecTemp.push_back(aShape);
+            myContext->Display(aShapeVecTemp.back(), false);
         }
     }
 }
-
 
 void OcctQtViewer::set_view_front()
 {

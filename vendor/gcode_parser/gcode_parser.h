@@ -67,17 +67,24 @@ struct shape {
     gp_Pnt ta0,ta1;                  // Tool direction offset point.
     Handle(AIS_Shape) aShape_tooldir_0;
     Handle(AIS_Shape) aShape_tooldir_1;
-    Handle(AIS_Shape) aShape_tooldir_connect;
+
+    std::vector<gp_Pnt> pvec_front_tooldir_path;
+    std::vector<gp_Pnt> pvec_tooldir_path;
+    std::vector<gp_Pnt> pvec_back_tooldir_path;
+
+    std::vector<gp_Pnt> pvec_final_tooldir_path;
+    double tooldir_final_lenght;
 
     double g64_p;
     double g64_q;
 };
 
-struct gcode_shapes {
-
-
-
+struct gcode_limits {
+    double xmin=INFINITY,xmax=-INFINITY;
+    double ymin=INFINITY,ymax=-INFINITY;
+    double zmin=INFINITY,zmax=-INFINITY;
 };
+
 
 class gcode_parser
 {
@@ -88,6 +95,8 @@ public:
     gcode_line process_token(const std::string &token, gcode_line gc, bool &inComment, std::string &comment);
     void tokenize(const std::string& filename, std::vector<gcode_line> &gvec, int debug);
     void tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec);
+    static void process_limits(const std::vector<gcode_line> &gvec, gcode_limits &limits);
+    static void optimize_tooldir_path(std::vector<shape> &svec, double fillet);
 
 private:
 };

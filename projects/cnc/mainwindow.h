@@ -70,7 +70,6 @@ public:
     void hal_connection();
 
 private slots:
-       void clothoid_test();
 
     void on_toolButton_fit_all_pressed();
 
@@ -119,18 +118,6 @@ private slots:
     void on_toolButton_scope_toggled(bool checked);
 
     void on_toolButton_clear_toolpath_pressed();
-
-    void on_spinBox_l0_x_valueChanged(int arg1);
-
-    void on_spinBox_l0_y_valueChanged(int arg1);
-
-    void on_spinBox_l0_z_valueChanged(int arg1);
-
-    void on_spinBox_l1_x_valueChanged(int arg1);
-
-    void on_spinBox_l1_y_valueChanged(int arg1);
-
-    void on_spinBox_l1_z_valueChanged(int arg1);
 
 public:
     OcctQtViewer *occ;

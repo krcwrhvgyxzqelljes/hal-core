@@ -79,6 +79,9 @@ struct shared_mem_data {
     char file_name[256];
     int load_file;
 
+    double tooldir_fillet;
+    gp_Pnt ta;
+
     // For each scurve axis we store the data in here.
     scurve_data scd[10];        // Jog xyz abc uvw.
 };

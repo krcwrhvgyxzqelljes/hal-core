@@ -19,6 +19,7 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TPrsStd_AISPresentation.hxx>
+#include <TColgp_HArray1OfPnt.hxx>
 #include <STEPControl_Writer.hxx>
 #include <STEPControl_Reader.hxx>
 #include <STEPCAFControl_Reader.hxx>
@@ -29,12 +30,15 @@
 #include <Geom_CartesianPoint.hxx>
 #include <Geom_BSplineCurve.hxx>
 #include <GeomAPI_PointsToBSpline.hxx>
+#include <GeomAPI_Interpolate.hxx>
 #include <GC_MakeArcOfCircle.hxx>
 #include <GC_MakeArcOfEllipse.hxx>
 #include <GC_MakeCircle.hxx>
 #include <GC_MakeEllipse.hxx>
 #include <GC_MakeSegment.hxx>
 #include <gce_MakeRotation.hxx>
+#include "gp_Elips.hxx"
+#include <gp_Quaternion.hxx>
 #include <TopExp.hxx>
 #include <TopoDS_Wire.hxx>
 #include <TopoDS.hxx>
@@ -83,11 +87,7 @@
 #include <Font_BRepTextBuilder.hxx>
 #include <Bnd_Box.hxx>
 
-#include "gp_Elips.hxx"
-
-
 #include <NCollection_Mat4.hxx>
-#include <gp_Quaternion.hxx>
 
 #include <gce_MakeCirc.hxx>
 #include <GCPnts_AbscissaPoint.hxx>
@@ -156,6 +156,8 @@ public:
     static Handle(AIS_Shape) draw_3d_line_wire(std::vector<gp_Pnt> pvec);
     static Handle(AIS_Shape) draw_3d_line_wire_low_memory_usage(const std::vector<gp_Pnt>& pvec);
     static Handle(AIS_Shape) draw_3d_line_wire_low_memory_usage(const std::vector<gp_Pnt>& pvec, Handle(AIS_Shape) existingShape);
+    static Handle(AIS_Shape) draw_3d_spline_degree_3(std::vector<gp_Pnt> pvec);
+    static void interpolate_point_on_spline_degree_3(const std::vector<gp_Pnt>& pvec, double progress, gp_Pnt &pi);
     static Handle(AIS_Shape) draw_3p_3d_arc(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1);
     static Handle(AIS_Shape) draw_3d_acad_arc(gp_Pnt center, double radius, double alpha1, double alpha2, gp_Dir dir);
     static Handle(AIS_Shape) draw_3d_pc_arc_closest(gp_Pnt point1,gp_Pnt point2,gp_Pnt center,gp_Dir dir ,gp_Pnt closest);
@@ -280,6 +282,8 @@ public:
     static void interpolate_point_on_line(const gp_Pnt& p0, const gp_Pnt& p1, double progress, gp_Pnt& pi);
     // Has errors. static void interpolate_point_on_arc(gp_Pnt p0, gp_Pnt pw, gp_Pnt p1, double progress, gp_Pnt &pi);
     static void interpolate_point_on_arc(gp_Pnt p0, gp_Pnt pw, gp_Pnt p1, double progress, gp_Pnt &pi);
+    static void interpolate_point_on_pvec_path(const std::vector<gp_Pnt>& pvec, const double &pathlenght, double progress, gp_Pnt &pi);
+
     static gp_Pnt rotate_point_around_line(const gp_Pnt& p_to_rotate, double theta, const gp_Pnt& p0, const gp_Pnt& p1);
     static int get_3d_arc_angle_rad_center(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1, double &angle_rad, gp_Pnt &pc);
     static double get_3d_arc_lenght(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1);
@@ -293,6 +297,7 @@ public:
                                                        const gp_Pnt &abc0,
                                                        const gp_Pnt &abc1,
                                                        const double tp_height);
+    static std::vector<gp_Pnt> trim_recorded_tooldir_path_line_both_sides(const std::vector<gp_Pnt> &pvec, double trim_dist);
 private:
     Handle(XCAFDoc_ColorTool) aColorTool;
     Handle(XCAFDoc_ShapeTool) aShapeTool;
