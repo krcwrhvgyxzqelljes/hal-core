@@ -28,6 +28,9 @@ public:
     void set_run_mode(cnc_run_mode run_mode);
     int load_file=0;
     double tooldir_fillet=0;
+    int tangential_knife_override=0;
+    double tangential_angle_x=0;
+    double tangential_angle_y=0;
 
 public slots:
 
@@ -47,12 +50,19 @@ private slots:
 
     void on_doubleSpinBox_tooldir_fillet_valueChanged(double arg1);
 
+    void on_checkBox_tangential_override_toggled(bool checked);
+
+    void on_doubleSpinBox_tool_angle_x_valueChanged(double arg1);
+
+    void on_doubleSpinBox_tool_angle_y_valueChanged(double arg1);
+
 private:
 
     Ui::form_auto *ui;
     std::string m_file_name;
     cnc_run_mode m_run_mode;
     gcode_limits m_gcode_limits;
+
 };
 
 #endif // FORM_AUTO_H

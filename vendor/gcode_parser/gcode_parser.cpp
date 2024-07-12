@@ -271,13 +271,13 @@ int gcode_parser::process_limits(const std::vector<gcode_line> &gvec, gcode_limi
 
     // Ok when there is no diff in xmax, xmin a box can not be made results in domain error.
     if(limits.xmin==limits.xmax){
-        limits.xmax+=1;
+        limits.xmax+=0.1;
     }
     if(limits.ymin==limits.ymax){
-        limits.ymax+=1;
+        limits.ymax+=0.1;
     }
     if(limits.zmin==limits.zmax){
-        limits.zmax+=1;
+        limits.zmax+=0.1;
     }
 
     return 1;

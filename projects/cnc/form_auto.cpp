@@ -121,8 +121,24 @@ void form_auto::on_toolButton_reload_pressed()
             mainWindow->occ->add_shapevec(i.aShape);
         }
 
-        /*
-        double fillet=ui->doubleSpinBox_tooldir_fillet->value();
+        //        // Code for 5 axis tooldir optimalisation.
+        //        gcode_parser::optimize_tooldir_path(svec,tooldir_fillet); // Adds fillet value.
+        //        int count=0;
+        //        for (auto& i : svec) {
+        //            mainWindow->occ->add_shapevec(i.aShape);
+        //            if(count==0){
+        //                mainWindow->occ->add_shapevec(i.aShape_tooldir_0);
+        //            }
+        //            mainWindow->occ->add_shapevec(i.aShape_tooldir_1);
+        //            if (count % 2 == 0) {
+        //                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(i.pvec_final_tooldir_path), Quantity_NOC_DARKORCHID2,0) );
+        //            } else {
+        //                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(i.pvec_final_tooldir_path), Quantity_NOC_CORAL3,0) );
+        //            }
+        //            count++;
+        //        }
+
+        double fillet=tooldir_fillet;
 
         int first=0, last=0;
         for(uint i=0; i<svec.size(); i++){
@@ -134,7 +150,7 @@ void form_auto::on_toolButton_reload_pressed()
         // Record tooldir path, trim tooldir path.
         int count=0;
         for (auto& i : svec) {
-             mainWindow->occ->add_shapevec(i.aShape);
+            mainWindow->occ->add_shapevec(i.aShape);
             // mainWindow->occ->add_shapevec(i.aShape_tooldir_1);
 
             // Recorded tooldir path preview.
@@ -161,7 +177,9 @@ void form_auto::on_toolButton_reload_pressed()
                 }
             }
             if(i.pvec_tooldir_path.size()>0){ // Draw result.
-                 mainWindow->occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage( i.pvec_tooldir_path) );
+                if(ui->checkBox_show_tooldir_blend_path->isChecked()){
+                    mainWindow->occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage( i.pvec_tooldir_path) );
+                }
             }
             count++;
         }
@@ -206,27 +224,34 @@ void form_auto::on_toolButton_reload_pressed()
                                 svec[j].pvec_front_tooldir_path.push_back(pi);
                             }
 
-                            mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_back_tooldir_path), Quantity_NOC_AZURE,0 ) );
-                            mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[j].pvec_front_tooldir_path), Quantity_NOC_CYAN,0 ) );
-
+                            if(ui->checkBox_show_tooldir_blend_path->isChecked()){
+                                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_back_tooldir_path), Quantity_NOC_AZURE,0 ) );
+                                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[j].pvec_front_tooldir_path), Quantity_NOC_CYAN,0 ) );
+                            }
                             gp_Pnt pi;
                             draw_primitives::interpolate_point_on_spline_degree_3({p1,p2,p5,p3},0.5,pi);
 
                             svec[i].aShape_tooldir_1=draw_primitives::draw_3d_line(pi,svec[i].p1);
                             svec[i].aShape_tooldir_1=draw_primitives::colorize( svec[i].aShape_tooldir_1, Quantity_NOC_DODGERBLUE1,0 );
-                             mainWindow->occ->add_shapevec(svec[i].aShape_tooldir_1);
+                            if(ui->checkBox_show_tooldir_blend_path->isChecked()){
+                                mainWindow->occ->add_shapevec(svec[i].aShape_tooldir_1);
+                            }
 
                         } else { // If spline fails, draw a line.
                             gp_Pnt p2=draw_primitives::get_line_midpoint(p1,p3);
                             svec[i].pvec_back_tooldir_path={p1,p2};
                             svec[j].pvec_front_tooldir_path={p2,p3};
 
-                            mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_back_tooldir_path), Quantity_NOC_AZURE,0 ) );
-                            mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[j].pvec_front_tooldir_path), Quantity_NOC_CYAN,0 ) );
+                            if(ui->checkBox_show_tooldir_blend_path->isChecked()){
+                                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_back_tooldir_path), Quantity_NOC_AZURE,0 ) );
+                                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[j].pvec_front_tooldir_path), Quantity_NOC_CYAN,0 ) );
+                            }
 
                             svec[i].aShape_tooldir_1=draw_primitives::draw_3d_line( p2 ,svec[i].p1);
                             svec[i].aShape_tooldir_1=draw_primitives::colorize( svec[i].aShape_tooldir_1, Quantity_NOC_DODGERBLUE1,0 );
-                            mainWindow->occ->add_shapevec(svec[i].aShape_tooldir_1);
+                            if(ui->checkBox_show_tooldir_blend_path->isChecked()){
+                                mainWindow->occ->add_shapevec(svec[i].aShape_tooldir_1);
+                            }
                         }
                         break;
                     }
@@ -280,24 +305,7 @@ void form_auto::on_toolButton_reload_pressed()
                 }
             }
         }
-        */
 
-        //        // Code for 5 axis tooldir optimalisation.
-        //        gcode_parser::optimize_tooldir_path(svec,tooldir_fillet); // Adds fillet value.
-        //        int count=0;
-        //        for (auto& i : svec) {
-        //            mainWindow->occ->add_shapevec(i.aShape);
-        //            if(count==0){
-        //                mainWindow->occ->add_shapevec(i.aShape_tooldir_0);
-        //            }
-        //            mainWindow->occ->add_shapevec(i.aShape_tooldir_1);
-        //            if (count % 2 == 0) {
-        //                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(i.pvec_final_tooldir_path), Quantity_NOC_DARKORCHID2,0) );
-        //            } else {
-        //                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(i.pvec_final_tooldir_path), Quantity_NOC_CORAL3,0) );
-        //            }
-        //            count++;
-        //        }
         svec.clear(); // Clean's memory. Opencascade has still the shapes. Kernel has it's own svec.
         load_file=1;
     }
@@ -376,5 +384,24 @@ void form_auto::on_doubleSpinBox_tooldir_fillet_valueChanged(double arg1)
 {
     tooldir_fillet=arg1;
     on_toolButton_reload_pressed(); // Reload the file to update tooldir fillets.
+}
+
+void form_auto::on_checkBox_tangential_override_toggled(bool checked)
+{
+    if(checked){
+        tangential_knife_override=1;
+    } else {
+        tangential_knife_override=0;
+    }
+}
+
+void form_auto::on_doubleSpinBox_tool_angle_x_valueChanged(double arg1)
+{
+    tangential_angle_x=arg1;
+}
+
+void form_auto::on_doubleSpinBox_tool_angle_y_valueChanged(double arg1)
+{
+    tangential_angle_y=arg1;
 }
 

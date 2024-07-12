@@ -64,6 +64,10 @@ void MainWindow::update(){
     double minpos[10];
     settings->read_settings(maxvel,maxacc,maxjer,maxpos,minpos);
 
+    shm_data.tangential_knife_override=aut->tangential_knife_override; // For testing purpose.
+    shm_data.tangential_angle_x=aut->tangential_angle_x;
+    shm_data.tangential_angle_y=aut->tangential_angle_y;
+
     for(uint i=0; i<10; i++){
 
         if(shm_data.state_mode==MANUAL){ // Apply jog procent speed.

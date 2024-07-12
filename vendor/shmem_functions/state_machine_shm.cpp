@@ -240,9 +240,14 @@ inline void process_trajectory_lenghts(){
     }
 }
 
-inline void load_gcode_from_line(shared_mem_data &shm,int start_line) {
+inline int load_gcode_from_line(shared_mem_data &shm,int start_line) {
     svec.clear();
     std::string file_name(shm.file_name);
+    if(shm.file_name[0] == '\0'){
+        std::cout<<"kernel: load gcode from line error, empty filename."<<std::endl;
+        return 0;
+    }
+
     std::vector<gcode_line> gvec;
     gcode_parser parser;
     parser.tokenize(file_name, gvec, 0);
@@ -285,15 +290,23 @@ inline void load_gcode_from_line(shared_mem_data &shm,int start_line) {
     copy_file_name(old_file_name, shm.file_name);
 
     std::cout << "-- gcode ready --" << std::endl << std::endl;
+
+    return 1;
 }
 
-inline void load_gcode(shared_mem_data &shm) {
+inline int load_gcode(shared_mem_data &shm) {
+
+    if(shm.file_name[0] == '\0'){
+        std::cout<<"kernel: load gcode error, filename empty"<<std::endl;
+        return 0;
+    }
+
     svec.clear();
     std::string file_name(shm.file_name);
     std::vector<gcode_line> gvec;
     gcode_parser().tokenize(file_name,gvec,0);
     gcode_parser().tokens_to_shapes(gvec, svec);
-   // gcode_parser().optimize_tooldir_path(svec,shm.tooldir_fillet);
+    gcode_parser().optimize_tooldir_path(svec,shm.tooldir_fillet);
 
     process_rapids_to_starpos(shm);
     process_trajectory_lenghts();
@@ -305,6 +318,8 @@ inline void load_gcode(shared_mem_data &shm) {
     copy_file_name(old_file_name,shm.file_name);
 
     std::cout<<"-- gcode ready --"<<std::endl<<std::endl;
+
+    return 1;
 }
 
 // Function to calculate rotation angles and translation vector
@@ -329,11 +344,16 @@ inline void calculate_rotation_angles(const gp_Pnt& p0, gp_Pnt p1, double &a, do
     quaternion.GetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
 }
 
+const double DEG_TO_RAD = M_PI / 180.0;
+const double RAD_TO_DEG = 180.0 / M_PI;
+
 gp_Pnt abc_pi;
 int interupt_rotate_abc=0;
+double tangential_knife_angle=0, aa=0, bb=0, cc=0;
 inline void handle_auto(shared_mem_data &shm){
 
     if(shm.load_file){
+        // std::cout<<"kernel: filename to load:"<<shm.file_name<<std::endl;
         if(shm.run_from_line==0){
             load_gcode(shm);
         }
@@ -342,7 +362,6 @@ inline void handle_auto(shared_mem_data &shm){
         }
         shm.load_file=0;
     }
-
 
     if(svec.size()>0){
 
@@ -460,7 +479,6 @@ inline void handle_auto(shared_mem_data &shm){
             draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
         }
 
-
         if(interupt_rotate_abc){
 
             std::cout<<"abc interupt move active."<<std::endl;
@@ -494,6 +512,49 @@ inline void handle_auto(shared_mem_data &shm){
             draw_primitives::interpolate_point_on_line(abc0,abc1,progress_,abc_pi);
         }
 
+        if(shm.tangential_knife_override){ // Test a tangential knife on the vertical c axis on xy plane.
+            // std::cout<<"tangential knife on c axis active."<<std::endl;
+
+            gp_Pnt v0,v1,v2,pn;
+
+            if(svec[svec_nr].g_id==0 || svec[svec_nr].g_id==1 ){
+
+                if(progress<0.999){
+                    draw_primitives::interpolate_point_on_line(p0,p1,progress,v0);
+                    draw_primitives::interpolate_point_on_line(p0,p1,progress+0.001,v1);
+                    pn=v0; // Normal, point on z axis.
+                    pn.SetZ(v0.Z()+1);
+                    v2=draw_primitives::rotate_point_around_line(v1,90*DEG_TO_RAD,v0,pn);
+                }
+            }
+            if(svec[svec_nr].g_id==2 || svec[svec_nr].g_id==3 ){
+
+                if(progress<0.999){
+                    draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress,v0);
+                    draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress+0.001,v1);
+                    pn=v0; // Normal, point on z axis.
+                    pn.SetZ(v0.Z()+1);
+                    v2=draw_primitives::rotate_point_around_line(v1,90*DEG_TO_RAD,v0,pn);
+                }
+            }
+
+            if(v0.Distance(v1)>0){
+                tangential_knife_angle=draw_primitives::get_2d_line_angle_xy(v0,v1);
+
+
+                // Get the pn (ta) point for the x axis.
+                pn=draw_primitives::rotate_point_around_line(pn,shm.tangential_angle_x,v0,v1);
+                // Get the pn (ta) point for the y axis.
+                pn=draw_primitives::rotate_point_around_line(pn,shm.tangential_angle_y,v0,v2);
+
+                calculate_rotation_angles(v0,pn,aa,bb,cc);
+            }
+            // std::cout<<"angle:"<<tangential_knife_angle*RAD_TO_DEG<<std::endl;
+            abc_pi={aa,bb,tangential_knife_angle};
+        }
+
+
+
         shm.pos[0]=pi.X();
         shm.pos[1]=pi.Y();
         shm.pos[2]=pi.Z();
@@ -505,7 +566,6 @@ inline void handle_auto(shared_mem_data &shm){
         shm.pos[6]=uvw_pi.X();
         shm.pos[7]=uvw_pi.Y();
         shm.pos[8]=uvw_pi.Z();
-
 
         // Update jog axis 0-9.
         shm.scd[0].guipos=pi.X();

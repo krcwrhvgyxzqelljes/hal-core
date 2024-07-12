@@ -82,6 +82,9 @@ struct shared_mem_data {
     double tooldir_fillet;
     gp_Pnt ta;
 
+    int tangential_knife_override; // Tangential knife test.
+    double tangential_angle_x, tangential_angle_y;
+
     // For each scurve axis we store the data in here.
     scurve_data scd[10];        // Jog xyz abc uvw.
 };
