@@ -34,8 +34,16 @@ void form_auto::on_toolButton_open_pressed()
         mainWindow->ui->label_current_file->setText(QString::fromStdString(m_file_name));
 
         std::vector<gcode_line> gvec;
-        gcode_parser().tokenize(m_file_name,gvec,1);
-        gcode_parser::process_limits(gvec,m_gcode_limits);
+        if(!gcode_parser().tokenize(m_file_name,gvec,0)){
+            std::cout<<"tokenize error."<<std::endl;
+        } else {
+            std::cout<<"tokenize ok."<<std::endl;
+        }
+        if(!gcode_parser::process_limits(gvec,m_gcode_limits)){
+            std::cout<<"process limit error."<<std::endl;
+        } else {
+            std::cout<<"process limit ok."<<std::endl;
+        }
 
         // Draw the gcode limit box.
         Handle(AIS_Shape) aShape_box = draw_primitives::draw_3d_box(m_gcode_limits.xmax-m_gcode_limits.xmin,
@@ -46,7 +54,11 @@ void form_auto::on_toolButton_open_pressed()
         mainWindow->occ->add_shapevec( aShape_box );
 
         std::vector<shape> svec;
-        gcode_parser().tokens_to_shapes(gvec, svec);
+        if(!gcode_parser().tokens_to_shapes(gvec,svec)){
+            std::cout<<"tokens to shape error."<<std::endl;
+        } else {
+            std::cout<<"tokens to shape ok."<<std::endl;
+        }
 
         // Code for 5 axis tooldir optimalisation.
         gcode_parser::optimize_tooldir_path(svec,tooldir_fillet); // Adds fillet value.
@@ -81,7 +93,11 @@ void form_auto::on_toolButton_reload_pressed()
         mainWindow->editor->appendPlainText(gcode);
 
         std::vector<gcode_line> gvec;
-        gcode_parser().tokenize(m_file_name,gvec,0);
+        if(!gcode_parser().tokenize(m_file_name,gvec,0)){
+            std::cout<<"tokenize error."<<std::endl;
+        } else {
+            std::cout<<"tokenize ok."<<std::endl;
+        }
         gcode_parser::process_limits(gvec,m_gcode_limits);
 
         // Draw the gcode limit box.
@@ -95,8 +111,17 @@ void form_auto::on_toolButton_reload_pressed()
         mainWindow->ui->label_current_file->setText(QString::fromStdString(m_file_name));
 
         std::vector<shape> svec;
-        gcode_parser().tokens_to_shapes(gvec,svec);
+        if(!gcode_parser().tokens_to_shapes(gvec,svec)){
+            std::cout<<"tokens to shape error."<<std::endl;
+        } else {
+            std::cout<<"tokens to shape ok."<<std::endl;
+        }
 
+        for (auto& i : svec) {
+            mainWindow->occ->add_shapevec(i.aShape);
+        }
+
+        /*
         double fillet=ui->doubleSpinBox_tooldir_fillet->value();
 
         int first=0, last=0;
@@ -255,23 +280,24 @@ void form_auto::on_toolButton_reload_pressed()
                 }
             }
         }
+        */
 
-//        // Code for 5 axis tooldir optimalisation.
-//        gcode_parser::optimize_tooldir_path(svec,tooldir_fillet); // Adds fillet value.
-//        int count=0;
-//        for (auto& i : svec) {
-//            mainWindow->occ->add_shapevec(i.aShape);
-//            if(count==0){
-//                mainWindow->occ->add_shapevec(i.aShape_tooldir_0);
-//            }
-//            mainWindow->occ->add_shapevec(i.aShape_tooldir_1);
-//            if (count % 2 == 0) {
-//                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(i.pvec_final_tooldir_path), Quantity_NOC_DARKORCHID2,0) );
-//            } else {
-//                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(i.pvec_final_tooldir_path), Quantity_NOC_CORAL3,0) );
-//            }
-//            count++;
-//        }
+        //        // Code for 5 axis tooldir optimalisation.
+        //        gcode_parser::optimize_tooldir_path(svec,tooldir_fillet); // Adds fillet value.
+        //        int count=0;
+        //        for (auto& i : svec) {
+        //            mainWindow->occ->add_shapevec(i.aShape);
+        //            if(count==0){
+        //                mainWindow->occ->add_shapevec(i.aShape_tooldir_0);
+        //            }
+        //            mainWindow->occ->add_shapevec(i.aShape_tooldir_1);
+        //            if (count % 2 == 0) {
+        //                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(i.pvec_final_tooldir_path), Quantity_NOC_DARKORCHID2,0) );
+        //            } else {
+        //                mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(i.pvec_final_tooldir_path), Quantity_NOC_CORAL3,0) );
+        //            }
+        //            count++;
+        //        }
         svec.clear(); // Clean's memory. Opencascade has still the shapes. Kernel has it's own svec.
         load_file=1;
     }
@@ -348,7 +374,7 @@ void form_auto::on_toolButton_stop_pressed()
 
 void form_auto::on_doubleSpinBox_tooldir_fillet_valueChanged(double arg1)
 {
-   tooldir_fillet=arg1;
-   on_toolButton_reload_pressed(); // Reload the file to update tooldir fillets.
+    tooldir_fillet=arg1;
+    on_toolButton_reload_pressed(); // Reload the file to update tooldir fillets.
 }
 

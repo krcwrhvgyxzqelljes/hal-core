@@ -93,10 +93,10 @@ public:
 
     std::pair<std::string, double> split_token(std::string token);
     gcode_line process_token(const std::string &token, gcode_line gc, bool &inComment, std::string &comment);
-    void tokenize(const std::string& filename, std::vector<gcode_line> &gvec, int debug);
-    void tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec);
-    static void process_limits(const std::vector<gcode_line> &gvec, gcode_limits &limits);
-    static void optimize_tooldir_path(std::vector<shape> &svec, double fillet);
+    int tokenize(const std::string& filename, std::vector<gcode_line> &gvec, int debug);
+    int tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec);
+    static int process_limits(const std::vector<gcode_line> &gvec, gcode_limits &limits);
+    static int optimize_tooldir_path(std::vector<shape> &svec, double fillet);
 
 private:
 };

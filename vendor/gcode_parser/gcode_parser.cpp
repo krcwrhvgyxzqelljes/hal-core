@@ -14,7 +14,7 @@ std::pair<std::string, double> gcode_parser::split_token(std::string token) {
     return std::make_pair(letter, value);
 }
 
-void gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line> &gvec, int debug) {
+int gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line> &gvec, int debug) {
     gvec.clear();  // Clear the vector to ensure it's empty before starting
 
     std::string gcode = std_functions().read_file_to_string(filename);
@@ -108,9 +108,10 @@ void gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line>
                  <<std::endl;
         }
     }
+    return 1;
 }
 
-void gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec){
+int gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec){
 
     gp_Pnt p={0,0,0};
     gp_Abc abc={0,0,0};
@@ -239,9 +240,11 @@ void gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::ve
         uvw=svec.back().uvw1;
         line++;
     }
+
+    return 1;
 }
 
-void gcode_parser::process_limits(const std::vector<gcode_line> &gvec, gcode_limits &limits){
+int gcode_parser::process_limits(const std::vector<gcode_line> &gvec, gcode_limits &limits){
 
     for(auto i:gvec){
         if(limits.xmin>i.x){
@@ -265,9 +268,22 @@ void gcode_parser::process_limits(const std::vector<gcode_line> &gvec, gcode_lim
             limits.zmax=i.z;
         }
     }
+
+    // Ok when there is no diff in xmax, xmin a box can not be made results in domain error.
+    if(limits.xmin==limits.xmax){
+        limits.xmax+=1;
+    }
+    if(limits.ymin==limits.ymax){
+        limits.ymax+=1;
+    }
+    if(limits.zmin==limits.zmax){
+        limits.zmax+=1;
+    }
+
+    return 1;
 }
 
-void gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet){
+int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet){
 
     int first=0, last=0;
     for(uint i=0; i<svec.size(); i++){
@@ -425,6 +441,8 @@ void gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet
             }
         }
     }
+
+    return 1;
 }
 
 

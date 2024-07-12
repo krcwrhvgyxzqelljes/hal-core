@@ -58,6 +58,19 @@ Handle(AIS_Shape) draw_primitives::draw_3d_sphere(double radius, gp_Pnt center){
 
 Handle(AIS_Shape) draw_primitives::draw_3d_box(double dx, double dy, double dz){
     // Create workframe box.
+    if(dx==0){
+        std::cout<<"draw 3d box, invalid input"<<std::endl;
+        return draw_3d_point({0,0,0});
+    }
+    if(dy==0){
+        std::cout<<"draw 3d box, invalid input"<<std::endl;
+        return draw_3d_point({0,0,0});
+    }
+    if(dz==0){
+        std::cout<<"draw 3d box, invalid input"<<std::endl;
+        return draw_3d_point({0,0,0});
+    }
+
     TopoDS_Shape t_topo_box = BRepPrimAPI_MakeBox(dx,dy,dz).Shape();
     Handle(AIS_Shape) t_ais_box = new AIS_Shape(t_topo_box);
     return t_ais_box;
@@ -3188,8 +3201,8 @@ void draw_primitives::get_transformed_line_points(Handle(AIS_Shape) aShape, gp_P
 }
 
 std::vector<gp_Pnt> draw_primitives::record_tooldir_path_line(gp_Pnt p0, gp_Pnt p1,
-                                                             gp_Pnt abc0, gp_Pnt abc1,
-                                                             double tp_height) {
+                                                              gp_Pnt abc0, gp_Pnt abc1,
+                                                              double tp_height) {
 
     std::vector<gp_Pnt> pvec;
     gp_Pnt pi, abci, p, ta;
