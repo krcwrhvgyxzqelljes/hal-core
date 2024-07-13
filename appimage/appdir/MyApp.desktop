@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=runtest_cnc
+GenericName=cnc controller
+Comment=simulator
+Exec=runtest_cnc
+TryExec=runtest_cnc
+StartupNotify=false
+Terminal=true
+SingleMainWindow=true
+Icon=icon
+Categories=Graphics;

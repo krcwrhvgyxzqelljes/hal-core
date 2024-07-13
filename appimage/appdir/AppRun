@@ -1,0 +1,11 @@
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+
+# Set LD_LIBRARY_PATH to include the necessary libraries
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/rtlib:${LD_LIBRARY_PATH}"
+
+# Set QT_PLUGIN_PATH to include Qt plugins path
+export QT_PLUGIN_PATH="${HERE}/usr/lib/qt5/plugins"
+
+# Execute your application
+exec "${HERE}/usr/bin/runtest_cnc" "$@"

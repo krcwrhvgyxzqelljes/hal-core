@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=MyApp
+GenericName=a test app
+Comment=test
+Keywords=audio;player;audacious;music;gtk;
+Categories=AudioVideo;Audio;Player;GTK;
+Exec=MyApp %U
+TryExec=audacious
+StartupNotify=false
+Terminal=true
+SingleMainWindow=true
