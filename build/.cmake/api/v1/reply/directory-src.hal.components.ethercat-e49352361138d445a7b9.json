@@ -1,0 +1,63 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"src/hal/components/ethercat/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 75,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 117,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "/home/user/hal-core-2.0/src/hal/components/ethercat/../../../../rtlib",
+			"paths" : 
+			[
+				"src/hal/components/ethercat/lcec.so"
+			],
+			"targetId" : "lcec::@7a67a2484e21db266501",
+			"targetIndex" : 8,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "/home/user/hal-core-2.0/src/hal/components/ethercat/../../../../rtlib",
+			"paths" : 
+			[
+				"src/hal/components/ethercat/lcec_conf.so"
+			],
+			"targetId" : "lcec_conf::@7a67a2484e21db266501",
+			"targetIndex" : 9,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "src/hal/components/ethercat",
+		"source" : "src/hal/components/ethercat"
+	}
+}

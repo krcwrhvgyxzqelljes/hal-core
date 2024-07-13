@@ -1,0 +1,45 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"src/hal/components/parport/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 40,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "/home/user/hal-core-2.0/src/hal/components/parport/../../../../rtlib",
+			"paths" : 
+			[
+				"src/hal/components/parport/hal_parport.so"
+			],
+			"targetId" : "hal_parport::@ded86842408d567e2149",
+			"targetIndex" : 3,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "src/hal/components/parport",
+		"source" : "src/hal/components/parport"
+	}
+}

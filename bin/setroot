@@ -1,0 +1,33 @@
+#!/usr/bin/bash
+ 
+# Set permissions to be albe to insert (insmod) kernel modules. 
+sudo chown root module_helper
+sudo chmod 4750 module_helper
+sudo chown root rtapi_app
+sudo chmod 4750 rtapi_app
+
+# Set the ~/lib path to be found by the system.
+sudo ldconfig $(pwd)/../lib
+echo "$(pwd)/../lib"
+
+cat << 'END'
+
+	module_helper & rtapi_app can now be used to insert rtlib components. 
+	
+	To clean the hal environment: ~/scripts/./halrun -U
+	
+	To test if hal is working: 
+	
+	cd ~/scripts 
+	. ./rip-environment (mention the first dot .)
+	./halrun -U (optional for clean up)
+
+	cd ~/bin
+	./halcmd show 
+		(if this drops some info you are great !)
+	
+	./halcmd loadrt test 
+		(This works when the src/hal/components/hal/hal.c is compiled 
+		to test.so and is present in the rtlib)
+	
+END

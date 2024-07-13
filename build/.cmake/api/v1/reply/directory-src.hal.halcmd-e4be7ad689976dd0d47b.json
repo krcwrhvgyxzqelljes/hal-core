@@ -1,0 +1,45 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"src/hal/halcmd/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 33,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "/home/user/hal-core-2.0/src/hal/halcmd/../../../bin",
+			"paths" : 
+			[
+				"src/hal/halcmd/halcmd"
+			],
+			"targetId" : "halcmd::@156c6ea6405e8ee9e51b",
+			"targetIndex" : 4,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "src/hal/halcmd",
+		"source" : "src/hal/halcmd"
+	}
+}

@@ -1,0 +1,45 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"src/hal/components/motion/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 41,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "/home/user/hal-core-2.0/src/hal/components/motion/../../../../rtlib",
+			"paths" : 
+			[
+				"src/hal/components/motion/motion.so"
+			],
+			"targetId" : "motion::@2be8537d05fadbf0f6b9",
+			"targetIndex" : 11,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "src/hal/components/motion",
+		"source" : "src/hal/components/motion"
+	}
+}

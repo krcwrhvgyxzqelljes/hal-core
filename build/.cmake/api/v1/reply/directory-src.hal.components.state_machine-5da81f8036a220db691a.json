@@ -1,0 +1,45 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"src/hal/components/state_machine/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 98,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "/home/user/hal-core-2.0/src/hal/components/state_machine/../../../../rtlib",
+			"paths" : 
+			[
+				"src/hal/components/state_machine/state_machine.so"
+			],
+			"targetId" : "state_machine::@b722cd95b74f3d44bae1",
+			"targetIndex" : 13,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "src/hal/components/state_machine",
+		"source" : "src/hal/components/state_machine"
+	}
+}

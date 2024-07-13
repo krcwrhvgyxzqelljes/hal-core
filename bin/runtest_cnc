@@ -1,0 +1,17 @@
+#!/usr/bin/bash
+
+export LD_LIBRARY_PATH=../lib
+
+cd .. && cd scripts
+./halclean 
+cd ..
+cd bin
+
+./halcmd stop
+./cnc &
+./halcmd -f cnc.hal_sim
+./halcmd start
+
+
+
+
