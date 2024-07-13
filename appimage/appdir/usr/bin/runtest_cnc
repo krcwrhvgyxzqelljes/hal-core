@@ -1,17 +1,20 @@
-#!/usr/bin/bash
+#!/bin/bash
 
-export LD_LIBRARY_PATH=../lib
+# Store the current directory
+current_dir=$(dirname "$(readlink -f "$0")")
 
-cd .. && cd scripts
-./halclean 
-cd ..
-cd bin
+# Print current directory
+echo "Current directory: $current_dir"
 
+# Change directory to where the script is located
+cd "$current_dir"
+
+# Set LD_LIBRARY_PATH relative to the script's location
+export LD_LIBRARY_PATH="$current_dir/../lib"
+
+# Execute commands
+./halclean
 ./halcmd stop
 ./cnc &
 ./halcmd -f cnc.hal_sim
 ./halcmd start
-
-
-
-
