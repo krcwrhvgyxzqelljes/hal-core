@@ -252,7 +252,9 @@ inline int load_gcode_from_line(shared_mem_data &shm,int start_line) {
     gcode_parser parser;
     parser.tokenize(file_name, gvec, 0);
     parser.tokens_to_shapes(gvec, svec);
-    parser.optimize_tooldir_path(svec,shm.tooldir_fillet);
+    std::vector<Handle(AIS_Shape)> aisvec;
+    parser.optimize_tooldir_path(svec,shm.tooldir_fillet,aisvec);
+    aisvec.clear();
 
     // Find the starting point in the shape vector
     int svec_start_nr = 0;
@@ -306,7 +308,9 @@ inline int load_gcode(shared_mem_data &shm) {
     std::vector<gcode_line> gvec;
     gcode_parser().tokenize(file_name,gvec,0);
     gcode_parser().tokens_to_shapes(gvec, svec);
-    gcode_parser().optimize_tooldir_path(svec,shm.tooldir_fillet);
+    std::vector<Handle(AIS_Shape)> aisvec; // This is only for opencascade shape preview. We need this universal function to verify output.
+    gcode_parser::optimize_tooldir_path(svec,shm.tooldir_fillet,aisvec);
+    aisvec.clear();
 
     process_rapids_to_starpos(shm);
     process_trajectory_lenghts();

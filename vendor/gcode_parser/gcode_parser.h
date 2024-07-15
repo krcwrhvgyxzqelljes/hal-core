@@ -96,7 +96,7 @@ public:
     int tokenize(const std::string& filename, std::vector<gcode_line> &gvec, int debug);
     int tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec);
     static int process_limits(const std::vector<gcode_line> &gvec, gcode_limits &limits);
-    static int optimize_tooldir_path(std::vector<shape> &svec, double fillet);
+    static int optimize_tooldir_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec);
 
 private:
 };

@@ -283,7 +283,7 @@ int gcode_parser::process_limits(const std::vector<gcode_line> &gvec, gcode_limi
     return 1;
 }
 
-int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet){
+int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec){
 
     int first=0, last=0;
     for(uint i=0; i<svec.size(); i++){
@@ -296,7 +296,7 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet)
     int count=0;
     for (auto& i : svec) {
         // mainWindow->occ->add_shapevec(i.aShape);
-        // mainWindow->occ->add_shapevec(i.aShape_tooldir_1);
+        aisvec.push_back( i.aShape_tooldir_1);
 
         // Recorded tooldir path preview.
         if ( (i.g_id == 0 || i.g_id == 1) && i.lenght>0 ) {
@@ -322,7 +322,7 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet)
             }
         }
         if(i.pvec_tooldir_path.size()>0){ // Draw result.
-            // mainWindow->occ->add_shapevec(draw_primitives::draw_3d_line_wire_low_memory_usage( i.pvec_tooldir_path) );
+            aisvec.push_back( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage( i.pvec_tooldir_path) , Quantity_NOC_BLUE, 0) );
         }
         count++;
     }
@@ -367,27 +367,27 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet)
                             svec[j].pvec_front_tooldir_path.push_back(pi);
                         }
 
-                        //mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_back_tooldir_path), Quantity_NOC_AZURE,0 ) );
-                        //mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[j].pvec_front_tooldir_path), Quantity_NOC_CYAN,0 ) );
+                        aisvec.push_back( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_back_tooldir_path), Quantity_NOC_AZURE,0 ) );
+                        aisvec.push_back( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[j].pvec_front_tooldir_path), Quantity_NOC_CYAN,0 ) );
 
                         gp_Pnt pi;
                         draw_primitives::interpolate_point_on_spline_degree_3({p1,p2,p5,p3},0.5,pi);
 
                         svec[i].aShape_tooldir_1=draw_primitives::draw_3d_line(pi,svec[i].p1);
                         svec[i].aShape_tooldir_1=draw_primitives::colorize( svec[i].aShape_tooldir_1, Quantity_NOC_DODGERBLUE1,0 );
-                        // mainWindow->occ->add_shapevec(svec[i].aShape_tooldir_1);
+                        aisvec.push_back( svec[i].aShape_tooldir_1);
 
                     } else { // If spline fails, draw a line.
                         gp_Pnt p2=draw_primitives::get_line_midpoint(p1,p3);
                         svec[i].pvec_back_tooldir_path={p1,p2};
                         svec[j].pvec_front_tooldir_path={p2,p3};
 
-                        // mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_back_tooldir_path), Quantity_NOC_AZURE,0 ) );
-                        // mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[j].pvec_front_tooldir_path), Quantity_NOC_CYAN,0 ) );
+                        aisvec.push_back( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_back_tooldir_path), Quantity_NOC_AZURE,0 ) );
+                        aisvec.push_back( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[j].pvec_front_tooldir_path), Quantity_NOC_CYAN,0 ) );
 
                         svec[i].aShape_tooldir_1=draw_primitives::draw_3d_line( p2 ,svec[i].p1);
                         svec[i].aShape_tooldir_1=draw_primitives::colorize( svec[i].aShape_tooldir_1, Quantity_NOC_DODGERBLUE1,0 );
-                        // mainWindow->occ->add_shapevec(svec[i].aShape_tooldir_1);
+                        aisvec.push_back( svec[i].aShape_tooldir_1);
                     }
                     break;
                 }
@@ -398,12 +398,12 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet)
     // Tooldir at program start.
     svec[0].aShape_tooldir_0=draw_primitives::draw_3d_line( svec[0].ta0 ,svec[0].p0);
     svec[0].aShape_tooldir_0=draw_primitives::colorize( svec[0].aShape_tooldir_0, Quantity_NOC_DODGERBLUE1,0 );
-    // mainWindow->occ->add_shapevec(svec[0].aShape_tooldir_0);
+    aisvec.push_back( svec[0].aShape_tooldir_0);
 
     // Tooldir at program end.
     svec[svec.size()-1].aShape_tooldir_1=draw_primitives::draw_3d_line( svec[svec.size()-1].ta1 ,svec[svec.size()-1].p1);
     svec[svec.size()-1].aShape_tooldir_1=draw_primitives::colorize( svec[svec.size()-1].aShape_tooldir_1, Quantity_NOC_DODGERBLUE1,0 );
-    // mainWindow->occ->add_shapevec(svec[svec.size()-1].aShape_tooldir_1);
+    aisvec.push_back( svec[svec.size()-1].aShape_tooldir_1);
 
     // Group final tooldir path to every gcode line. Also cleanup memory.
     for (uint i=0; i<svec.size(); i++) {
@@ -423,10 +423,11 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet)
         svec[i].pvec_back_tooldir_path.clear();
 
         // Check if ii is even or odd. Show difference in color output to verify content.
+        // This draw the final tooldir path, matching one gcode line.
         if (i % 2 == 0) {
-            // mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_final_tooldir_path), Quantity_NOC_DARKORCHID2,0) );
+            // aisvec.push_back( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_final_tooldir_path), Quantity_NOC_DARKORCHID2,0) );
         } else {
-            // mainWindow->occ->add_shapevec( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_final_tooldir_path), Quantity_NOC_CORAL3,0) );
+            // aisvec.push_back( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage(svec[i].pvec_final_tooldir_path), Quantity_NOC_CORAL3,0) );
         }
     }
 
