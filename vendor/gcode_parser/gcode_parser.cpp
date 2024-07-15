@@ -126,8 +126,10 @@ int gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vec
     int to_inches=0;
     double g64_p=0;
     double g64_q=0;
+    int path_offset_dir=0;
 
     int line=1;
+    int spline_start=0;
     for(auto g:gvec){
 
         if(g.g==20){ // G20 - to use inches for length units.
@@ -135,6 +137,16 @@ int gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vec
         }
         if(g.g==21){ // G21 - to use millimeters for length units.
             to_inches=0;
+        }
+
+        if(g.g==40){ // Tool compensation off, we can use this for tangential knife or plasma, to set the cut compensation on a,b axis.
+            path_offset_dir=0;
+        }
+        if(g.g==41){ // Tool offset left of programmed path.
+            path_offset_dir=1;
+        }
+        if(g.g==42){ // Tool offset right of programmed path.
+            path_offset_dir=2;
         }
 
         if(g.g==17){ // G17 (Z-axis, XY-plane)
@@ -171,7 +183,16 @@ int gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vec
             svec.push_back(sha);
             svec.back().gcode_line=line;
             svec.back().g_id=g.g;
+            spline_start=0; // Reset flag.
         }
+        if(g.g==5 && !spline_start){ // New shape found.
+            svec.push_back(sha);
+            svec.back().gcode_line=line;
+            svec.back().g_id=g.g;
+            spline_start=1; // Reset flag.
+        }
+
+
         if(g.e>0){
             svec.back().e_id=g.e;
         }
@@ -193,19 +214,15 @@ int gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vec
 
             svec.back().aShape=draw_primitives::draw_3d_gcode_line(svec.back().p0, svec.back().p1, svec.back().g_id, svec.back().pw);
 
-
-            svec.back().aShape_tooldir_0=draw_primitives::draw_3d_line_vector(svec.back().p0,15,svec.back().abc0.X(),svec.back().abc0.Y(),svec.back().abc0.Z(),svec.back().ta0);
-            svec.back().aShape_tooldir_1=draw_primitives::draw_3d_line_vector(svec.back().p1,15,svec.back().abc1.X(),svec.back().abc1.Y(),svec.back().abc1.Z(),svec.back().ta1);
-            svec.back().aShape_tooldir_1=draw_primitives::colorize( svec.back().aShape_tooldir_1, Quantity_NOC_AQUAMARINE2, 0.8);
-
-            //svec.back().aShape_tooldir_connect= draw_primitives::colorize( draw_primitives::draw_3d_line(svec.back().ta0,svec.back().ta1), Quantity_NOC_GREEN, 0.8);
-
-            //std::vector<gp_Pnt> pvec=draw_primitives::record_tooldir_path_line(svec.back().p0,svec.back().p1,svec.back().abc0,svec.back().abc1,15);
-            //svec.back().aShape_tooldir_connect=draw_primitives::draw_3d_line_wire_low_memory_usage(pvec);
+            // Here we calculate point ta0 & ta1. This is a tooldir point on the tooldir axis.
+            draw_primitives::draw_3d_line_vector(svec.back().p0,15,svec.back().abc0.X(),svec.back().abc0.Y(),svec.back().abc0.Z(),svec.back().ta0);
+            draw_primitives::draw_3d_line_vector(svec.back().p1,15,svec.back().abc1.X(),svec.back().abc1.Y(),svec.back().abc1.Z(),svec.back().ta1);
 
             svec.back().lenght=svec.back().p0.Distance(svec.back().p1);
             svec.back().g64_p=g64_p;
             svec.back().g64_q=g64_q;
+            svec.back().path_offset_dir=path_offset_dir;
+            svec.back().shape_type=gcode_shape_type::line;
         }
 
         // Arc, circle or helix.
@@ -221,20 +238,54 @@ int gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vec
             svec.back().aShape=draw_primitives::draw_3d_gcode_arc_circle_helix(svec.back().p0, svec.back().p1, plane, svec.back().g_id, g.i, g.j, g.k,
                                                                                svec.back().turns, svec.back().g2_continuity, svec.back().pw);
 
-            svec.back().aShape_tooldir_0=draw_primitives::draw_3d_line_vector(svec.back().p0,15,svec.back().abc0.X(),svec.back().abc0.Y(),svec.back().abc0.Z(),svec.back().ta0);
-            svec.back().aShape_tooldir_1=draw_primitives::draw_3d_line_vector(svec.back().p1,15,svec.back().abc1.X(),svec.back().abc1.Y(),svec.back().abc1.Z(),svec.back().ta1);
-            svec.back().aShape_tooldir_1=draw_primitives::colorize( svec.back().aShape_tooldir_1, Quantity_NOC_AQUAMARINE2, 0.8);
-
-            //svec.back().aShape_tooldir_connect= draw_primitives::colorize( draw_primitives::draw_3d_line(svec.back().ta0,svec.back().ta1), Quantity_NOC_GREEN, 0.8);
-
-            //std::vector<gp_Pnt> pvec=draw_primitives::record_tooldir_path_arc(svec.back().p0,svec.back().pw,svec.back().p1,svec.back().abc0,svec.back().abc1,15);
-            //svec.back().aShape_tooldir_connect=draw_primitives::draw_3d_line_wire_low_memory_usage(pvec);
+            // Here we calculate point ta0 & ta1. This is a tooldir point on the tooldir axis.
+            draw_primitives::draw_3d_line_vector(svec.back().p0,15,svec.back().abc0.X(),svec.back().abc0.Y(),svec.back().abc0.Z(),svec.back().ta0);
+            draw_primitives::draw_3d_line_vector(svec.back().p1,15,svec.back().abc1.X(),svec.back().abc1.Y(),svec.back().abc1.Z(),svec.back().ta1);
 
             // Todo calculate helix lenght.
             svec.back().lenght=draw_primitives::get_3d_arc_lenght(svec.back().p0,svec.back().pw,svec.back().p1);
             svec.back().g64_p=g64_p;
             svec.back().g64_q=g64_q;
+            svec.back().path_offset_dir=path_offset_dir;
+            svec.back().shape_type=gcode_shape_type( draw_primitives::get_arc_shape_type(plane,svec.back().p0,svec.back().p1) );
         }
+
+        // Clothoid.
+        if(svec.back().g_id==9){
+            svec.back().p0=p;
+            svec.back().p1={g.x,g.y,g.z};
+            svec.back().abc0=abc;
+            svec.back().abc1={g.a,g.b,g.c};
+            svec.back().uvw0=uvw;
+            svec.back().uvw1={g.u,g.v,g.w};
+
+            std::cout<<"gcode parser: no clothoid produced."<<std::endl;
+        }
+
+        // Spline.
+        /*
+            # Spline valid gcode:
+            G5  x0 y0 z0 	# spline start point.
+                x50 y50     # spline control point, newline
+                ..          # more control points, newline.
+                x100 y0     # spline end point, newline
+         */
+        if(spline_start==1){
+
+            svec.back().p0=p;               // Unused.
+            svec.back().p1={g.x,g.y,g.z};   // Unused.
+            svec.back().abc0=abc;
+            svec.back().abc1={g.a,g.b,g.c};
+            svec.back().uvw0=uvw;
+            svec.back().uvw1={g.u,g.v,g.w};
+
+            svec.back().pwvec.push_back({g.x,g.y,g.z}); // Add spline points.
+            draw_primitives::filter_out_duplicate_points(svec.back().pwvec);
+
+            svec.back().aShape=draw_primitives::draw_3d_spline_degree_3(svec.back().pwvec);
+            svec.back().aShape=draw_primitives::colorize( svec.back().aShape, Quantity_NOC_GRAY50, 0.8);
+        }
+
         p=svec.back().p1;
         abc=svec.back().abc1;
         uvw=svec.back().uvw1;
@@ -444,6 +495,15 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet,
     }
 
     return 1;
+}
+
+int gcode_parser::optimize_tcp_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec){
+
+    // First get the shape type.
+    // Line G0-G1, Arc G2-G3, Spline G.. , Helix G2-G3 + Zdiff, Clothoid G9.
+
+
+
 }
 
 

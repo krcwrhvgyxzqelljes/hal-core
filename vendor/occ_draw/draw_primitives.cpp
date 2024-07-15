@@ -132,6 +132,32 @@ void makeHelix(void)
 }
 
 /*
+    Given 2 points, we can check the shape type for arc.
+*/
+int draw_primitives::get_arc_shape_type(const int &plane, const gp_Pnt &p0, const gp_Pnt &p1){
+
+    if(p0.Distance(p1)==0){
+        //  std::cout<<"Error, spiral is circle"<<std::endl;
+        return 3; // Circle.
+    }
+
+    if(plane==0 && p0.Z()==p1.Z()){
+        // std::cout<<"Error, spiral needs z diff value in xy plane."<<std::endl;
+        return 2; // Arc.
+    }
+    if(plane==1 && p0.Y()==p1.Y()){
+        // std::cout<<"Error, spiral needs y diff value in xz plane."<<std::endl;
+        return 2; // Arc.
+    }
+    if(plane==2 && p0.X()==p1.X()){
+        // std::cout<<"Error, spiral needs x diff value in yz plane."<<std::endl;
+        return 2; // Arc.
+    }
+
+    return 4; // Is a helix.
+}
+
+/*
 Sample gcode tested for spiral, helix:
 
     x1 y1(start xy circle)
@@ -1027,6 +1053,33 @@ Handle(AIS_Shape) draw_primitives::draw_3d_gcode_line(gp_Pnt p0, gp_Pnt p1, int 
 }
 
 /*
+p0 = circumfence point of circle.
+
+plane:
+    0=xy plane ,G17
+    1=xz plane ,G18
+    2=yz plane ,G19
+
+gcode arc center:
+    i=gcode I, center offset for x, seen from arc startpoint.
+    j=gcode J, center offset for y, seen from arc startpoint.
+    k=gcode K, center offset for z, seen from arc startpoint.
+*/
+gp_Pnt draw_primitives::get_circle_center(const gp_Pnt& p0, const int& plane,
+                         const double& i, const double& j, const double& k, gp_Pnt &pc){
+
+    if(plane==0){
+        pc={p0.X()+i, p0.Y()+j, p0.Z()};
+    }
+    if(plane==1){
+        pc={p0.X()+i, p0.Y(), p0.Z()+k};
+    }
+    if(plane==2){
+        pc={p0.X(), p0.Y()+j, p0.Z()+k};
+    }
+}
+
+/*
 p0 = starpoint of arc.
 p1 = endpoint of arc.
 pw = arc waypoint.
@@ -1054,16 +1107,7 @@ Handle(AIS_Shape) draw_primitives::draw_3d_gcode_arc_circle_helix(const gp_Pnt& 
                                                                   const int& turns, const int& g2_continuity, gp_Pnt &pw){
 
     gp_Pnt pc;
-
-    if(plane==0){
-        pc={p0.X()+i, p0.Y()+j, p0.Z()};
-    }
-    if(plane==1){
-        pc={p0.X()+i, p0.Y(), p0.Z()+k};
-    }
-    if(plane==2){
-        pc={p0.X(), p0.Y()+j, p0.Z()+k};
-    }
+    get_circle_center(p0,plane,i,j,k,pc);
 
     // Draw full circle.
     if(p0.Distance(p1)==0 && p0.Distance(pc)>0){
@@ -1656,7 +1700,7 @@ double draw_primitives::get_3d_arc_lenght(const gp_Pnt &p0, const gp_Pnt &pw, co
 }
 
 // Validated on xy plane fwd & rev ok. Left for info.
-void draw_primitives::interpolate_point_on_arc(gp_Pnt p0, gp_Pnt pw, gp_Pnt p1, double progress, gp_Pnt &pi){
+void draw_primitives::interpolate_point_on_arc(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1, const double &progress, gp_Pnt &pi){
 
     if(p0.X()==p1.X() && p0.Y()==p1.Y() && p0.Z()==p1.Z()){
         // std::cout<<"error, is circle, use circle interpolation function."<<std::endl;
@@ -1704,6 +1748,14 @@ void draw_primitives::interpolate_point_on_arc(gp_Pnt p0, gp_Pnt pw, gp_Pnt p1, 
     }
 
     pi=rotate_point_around_line(p0,progress*angle,pc,{pc.X()+an.x(),pc.Y()+an.y(),pc.Z()+an.z()});
+}
+
+void draw_primitives::interpolate_point_on_circle(const gp_Pnt &p0, const gp_Pnt &pc, const int &plane, const int &gcode, const double &progress, gp_Pnt &pi){
+
+
+
+
+
 }
 
 void draw_primitives::print_gp_Pnt(gp_Pnt pnt){
@@ -2327,6 +2379,33 @@ bool draw_primitives::draw_3d_line_arc_offset_lines( Handle(AIS_Shape) shapeLine
     return 1;
 }
 
+void draw_primitives::filter_out_duplicate_points(std::vector<gp_Pnt>& pvec, double tolerance){
+    if (pvec.empty()) {
+        return;
+    }
+
+    // Result vector to store unique points
+    std::vector<gp_Pnt> uniquePoints;
+    uniquePoints.reserve(pvec.size());
+
+    // Iterate over the input points
+    for (const auto& point : pvec) {
+        bool isDuplicate = false;
+        for (const auto& uniquePoint : uniquePoints) {
+            if (point.Distance(uniquePoint) <= tolerance) {
+                isDuplicate = true;
+                break;
+            }
+        }
+        if (!isDuplicate) {
+            uniquePoints.push_back(point);
+        }
+    }
+
+    // Replace the original vector with the filtered one
+    pvec = std::move(uniquePoints);
+}
+
 //bool draw_primitives::draw_3d_arc_line_fillet_conventional(Handle(AIS_Shape) shapeArc, Handle(AIS_Shape) shapeLine, double radius, Handle(AIS_Shape) &shape){
 
 //    //! Or use:
@@ -2881,18 +2960,16 @@ gp_Pln draw_primitives::align_plane_to_origin(const gp_Pln& originalPlane) {
 }
 
 // Progress 0-1.
-void draw_primitives::interpolate_point_on_line(const gp_Pnt& p0, const gp_Pnt& p1, double progress, gp_Pnt& pi) {
+void draw_primitives::interpolate_point_on_line(const gp_Pnt& p0, const gp_Pnt& p1, const double &progress, gp_Pnt& pi) {
     // Ensure progress is within the range [0, 1]
-    if (progress < 0.0) progress = 0.0;
-    if (progress > 1.0) progress = 1.0;
+    double pro=progress;
+    if (pro < 0.0) pro = 0.0;
+    if (pro > 1.0) pro = 1.0;
 
     // Calculate the interpolated point
-    double x = p0.X() + (p1.X() - p0.X()) * progress;
-    double y = p0.Y() + (p1.Y() - p0.Y()) * progress;
-    double z = p0.Z() + (p1.Z() - p0.Z()) * progress;
-
-    // std::cout<<"progress:"<<progress<<std::endl;
-
+    double x = p0.X() + (p1.X() - p0.X()) * pro;
+    double y = p0.Y() + (p1.Y() - p0.Y()) * pro;
+    double z = p0.Z() + (p1.Z() - p0.Z()) * pro;
     pi.SetCoord(x, y, z);
 }
 
@@ -3100,6 +3177,19 @@ Handle(AIS_Shape) draw_primitives::draw_3d_line_wire_low_memory_usage(const std:
 }
 
 Handle(AIS_Shape) draw_primitives::draw_3d_spline_degree_3(std::vector<gp_Pnt> pvec){
+
+    filter_out_duplicate_points(pvec);
+
+    if(pvec.size()==2){
+        return draw_3d_line(pvec.front(),pvec.back());
+    }
+    if(pvec.size()<2){
+        return draw_3d_point(pvec.front());
+    }
+    if(pvec.size()==0){
+        std::cout<<"spline error, no points given."<<std::endl;
+        return draw_3d_point({0,0,0});
+    }
 
     bool periodicFlag=false;
     double tolerance=Precision::Approximation();

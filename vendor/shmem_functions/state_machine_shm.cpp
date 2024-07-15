@@ -179,10 +179,12 @@ inline void process_rapids_to_starpos(shared_mem_data &shm){
             // Insert rapids from current pos to program startpos.
             shape s0;
             s0.g_id=0;
+            s0.shape_type=gcode_shape_type::line;
             s0.p0={shm.scd[0].guipos, shm.scd[1].guipos, shm.scd[2].guipos};
             s0.p1={shm.scd[0].guipos, shm.scd[1].guipos, svec[0].p0.Z()+5};
             s0.pw=draw_primitives::get_line_midpoint(s0.p0,s0.p1);
             s0.lenght=s0.p0.Distance(s0.p1);
+
 
             s0.abc0={shm.scd[3].guipos, shm.scd[4].guipos, shm.scd[5].guipos};
             s0.abc1=s0.abc0;
@@ -191,6 +193,7 @@ inline void process_rapids_to_starpos(shared_mem_data &shm){
             s0.uvw1=s0.uvw0;
 
             shape s1;
+            s1.shape_type=gcode_shape_type::line;
             s1.g_id=0;
             s1.p0=s0.p1;
             s1.p1={svec[0].p0.X(),svec[0].p0.Y(),s0.p1.Z()};
@@ -204,6 +207,7 @@ inline void process_rapids_to_starpos(shared_mem_data &shm){
 
             shape s2;
             s2.g_id=0;
+            s2.shape_type=gcode_shape_type::line;
             s2.p0=s1.p1;
             s2.p1=svec[0].p0;
             s2.pw=draw_primitives::get_line_midpoint(s2.p0,s2.p1);
@@ -441,33 +445,24 @@ inline void handle_auto(shared_mem_data &shm){
         }
         // std::cout<<"progress:"<<progress<<std::endl;
 
-        if(svec[svec_nr].g_id==0 || svec[svec_nr].g_id==1 ){
+        if(svec[svec_nr].shape_type==gcode_shape_type::line){
             draw_primitives::interpolate_point_on_line(p0,p1,progress,pi);
             draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
-            // std::cout<<"original angle a:"<<abc_pi.X()<<" b:"<<abc_pi.Y()<<" c:"<<abc_pi.X()<<std::endl;
-            // std::cout<<"original x:"<<svec[svec_nr].ta1.X()<<" y:"<<svec[svec_nr].ta1.Y()<<" z:"<<svec[svec_nr].ta1.Z()<<std::endl;
 
             if(svec[svec_nr].pvec_final_tooldir_path.size()>0){
                 gp_Pnt ta;
                 draw_primitives::interpolate_point_on_pvec_path(svec[svec_nr].pvec_final_tooldir_path,svec[svec_nr].tooldir_final_lenght,progress,ta);
                 double a,b,c;
                 calculate_rotation_angles(pi,ta,a,b,c);
-
-                //
-
                 abc_pi={a,b,abc_pi.Z()};
-                //std::cout<<"angle a:"<<a<<" b:"<<b<<" c:"<<c<<std::endl;
                 shm.ta=ta;
-                // std::cout<<"ta x:"<<ta.X()<<" y:"<<ta.Y()<<" z:"<<ta.Z()<<std::endl;
             }
 
             draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
         }
-        if(svec[svec_nr].g_id==2 || svec[svec_nr].g_id==3 ){
+        if(svec[svec_nr].shape_type==gcode_shape_type::arc){
             draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress,pi);
             draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
-            // std::cout<<"original angle a:"<<abc_pi.X()<<" b:"<<abc_pi.Y()<<" c:"<<abc_pi.X()<<std::endl;
-            // std::cout<<"original x:"<<svec[svec_nr].ta1.X()<<" y:"<<svec[svec_nr].ta1.Y()<<" z:"<<svec[svec_nr].ta1.Z()<<std::endl;
 
             if(svec[svec_nr].pvec_final_tooldir_path.size()>0){
                 gp_Pnt ta;
@@ -476,11 +471,19 @@ inline void handle_auto(shared_mem_data &shm){
                 calculate_rotation_angles(pi,ta,a,b,c);
                 abc_pi={a,b,abc_pi.Z()};
                 shm.ta=ta;
-                // std::cout<<"angle a:"<<a<<" b:"<<b<<" c:"<<c<<std::endl;
-                // std::cout<<"ta x:"<<ta.X()<<" y:"<<ta.Y()<<" z:"<<ta.Z()<<std::endl;
             }
 
             draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
+        }
+
+        if(svec[svec_nr].shape_type==gcode_shape_type::circle){
+
+        }
+        if(svec[svec_nr].shape_type==gcode_shape_type::spline){
+
+        }
+        if(svec[svec_nr].shape_type==gcode_shape_type::clothoid){
+
         }
 
         if(interupt_rotate_abc){

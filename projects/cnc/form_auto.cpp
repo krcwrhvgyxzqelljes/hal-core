@@ -63,6 +63,7 @@ void form_auto::on_toolButton_open_pressed()
             }
         }
 
+        /*
         // Code for 5 axis tooldir optimalisation.
         std::vector<Handle(AIS_Shape)> aisvec;
         if(!gcode_parser::optimize_tooldir_path(svec,tooldir_fillet,aisvec)){  // Adds fillet value.
@@ -74,8 +75,9 @@ void form_auto::on_toolButton_open_pressed()
             }
         }
 
+        */
         svec.clear(); // Clean up memory, the kernel has it's own svec.
-        aisvec.clear();
+        //aisvec.clear();
         load_file=1;
     }
 }

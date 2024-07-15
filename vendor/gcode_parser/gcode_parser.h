@@ -39,12 +39,23 @@ public:
 typedef gp_Pnt gp_Abc;
 typedef gp_Pnt gp_Uvw;
 
+enum gcode_shape_type {
+    point=0,
+    line=1,
+    arc=2,
+    circle=3,
+    helix=4,
+    clothoid=5,
+    spline=5
+};
+
 struct shape {
     int g_id=0;                 // Line, arc, rapic, general.
     int e_id;                   // G9 identifyer for line, arc, clothoid, etc.
     gp_Pnt p0={0,0,0},pw,p1;    // Start, way, end point.
     gp_Pnt pc,pn;               // Center, Point on normal axis.
-    std::vector<gp_Pnt> pwvec;  // Vector of waypoints for splines.
+    int plane;                  // Plane for circle.
+    std::vector<gp_Pnt> pwvec;  // Vector of spline points. p0,pw,p1 are unused for splines.
     double radius;
     double lenght;              // Lenght of this shape.
     double lenght_begin;
@@ -62,6 +73,7 @@ struct shape {
     double spindle_speed;
     int tool_nr;
 
+    gcode_shape_type shape_type;        // Enum gcode shape type.
     Handle(AIS_Shape) aShape;
 
     gp_Pnt ta0,ta1;                  // Tool direction offset point.
@@ -77,6 +89,7 @@ struct shape {
 
     double g64_p;
     double g64_q;
+    int path_offset_dir;        // G40=0 (no offset), G41=1 (left offset), G42=2 (right offset).
 };
 
 struct gcode_limits {
@@ -97,6 +110,7 @@ public:
     int tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec);
     static int process_limits(const std::vector<gcode_line> &gvec, gcode_limits &limits);
     static int optimize_tooldir_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec);
+    static int optimize_tcp_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec);
 
 private:
 };

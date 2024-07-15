@@ -813,6 +813,7 @@ public:
 "G1 	line feed\n"
 "G2 	arc, cirlce, helix clockwise cw\n"
 "G3 	arc, circle, helix counter clockwise ccw\n"
+"G5          	spline\n"
 "G9 	general motion \n"
 "\n"
 "G17  	xy plane \n"
@@ -824,6 +825,12 @@ public:
 "	Q=naive cam tollerance\n"
 "	L=helix continuity\n"
 "\n"
+"# Spline valid gcode:\n"
+"G5              	x0 y0 z0 	# spline start point.	\n"
+"	x50 y50	# spline control point, newline\n"
+"	# more control points, newline.\n"
+"	x100 y0        # spline end point, newline\n"
+"G0 ...\n"
 "", nullptr));
 #if QT_CONFIG(tooltip)
         toolButton_to_lower_letters->setToolTip(QCoreApplication::translate("MainWindow", "<html><head/><body><p>From:</p><p><span style=\" font-weight:700;\">X0 Y0 Z0</span></p><p>to :</p><p><span style=\" font-weight:700;\">x0 x0 x0</span></p></body></html>", nullptr));

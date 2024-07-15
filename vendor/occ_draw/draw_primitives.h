@@ -138,6 +138,7 @@ public:
     static Handle(AIS_Shape) draw_2d_text(std::string str, int textheight, gp_Pnt point, double rot_deg);
 
     static double calculate_2d_angle_rad(const double& x0, const double& y0, const double& x1, const double& y1);
+    static int get_arc_shape_type(const int &plane, const gp_Pnt &p0, const gp_Pnt &p1); // Check if arc, circle or helix.
     static Handle(AIS_Shape) draw_2d_gcode_G2_xy_helix(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& pc, const int& turns);
     static Handle(AIS_Shape) draw_2d_gcode_G2_xy_helix_g2_continuity_test(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& pc, const int& turns);
     static Handle(AIS_Shape) draw_2d_gcode_G3_xy_helix(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& pc, const int& turns);
@@ -248,6 +249,9 @@ public:
     //! Test functions.
     static bool draw_3d_line_arc_offset_lines( Handle(AIS_Shape) shapeLine, Handle(AIS_Shape) shapeArc, double offset, Handle(AIS_Shape) &shapeA, Handle(AIS_Shape) &shapeB);
 
+    // Filter functions:
+    static void filter_out_duplicate_points(std::vector<gp_Pnt> &pvec, double tolerance=0.001);
+
     // Print functions:
     static void print_gp_Pnt(gp_Pnt pnt);
     static void print_gp_Pnt(std::string text, gp_Pnt pnt);
@@ -269,6 +273,7 @@ public:
     static double get_2d_arc_radius_xz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static double get_2d_arc_radius_yz(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1);
     static int get_lines_colinear(const gp_Pnt& p0, const gp_Pnt& p1, const gp_Pnt& p2, const gp_Pnt& p3);
+    static gp_Pnt get_circle_center(const gp_Pnt& p0, const int& plane, const double& i, const double& j, const double& k, gp_Pnt &pc);
 
     static gp_Pln create_top_view_plane();
     static void port_points_between_planes(const gp_Pln& sourcePlane, const gp_Pln& targetPlane, std::vector<gp_Pnt> &pvec);
@@ -279,9 +284,9 @@ public:
     static void get_3d_arc_radius_and_center(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1, double& radius, gp_Pnt& center);
     static void get_3d_arc_angle_radians(const gp_Pnt& p0, const gp_Pnt& pw, const gp_Pnt& p1, double &theta);
 
-    static void interpolate_point_on_line(const gp_Pnt& p0, const gp_Pnt& p1, double progress, gp_Pnt& pi);
-    // Has errors. static void interpolate_point_on_arc(gp_Pnt p0, gp_Pnt pw, gp_Pnt p1, double progress, gp_Pnt &pi);
-    static void interpolate_point_on_arc(gp_Pnt p0, gp_Pnt pw, gp_Pnt p1, double progress, gp_Pnt &pi);
+    static void interpolate_point_on_line(const gp_Pnt &p0, const gp_Pnt &p1, const double &progress, gp_Pnt &pi);
+    static void interpolate_point_on_arc(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1, const double &progress, gp_Pnt &pi);
+    static void interpolate_point_on_circle(const gp_Pnt &p0, const gp_Pnt &pc, const int &plane, const int &gcode, const double &progress, gp_Pnt &pi);
     static void interpolate_point_on_pvec_path(const std::vector<gp_Pnt>& pvec, const double &pathlenght, double progress, gp_Pnt &pi);
 
     static gp_Pnt rotate_point_around_line(const gp_Pnt& p_to_rotate, double theta, const gp_Pnt& p0, const gp_Pnt& p1);

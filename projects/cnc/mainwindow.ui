@@ -1197,6 +1197,7 @@ color: rgb(255, 255, 255);</string>
 G1 	line feed
 G2 	arc, cirlce, helix clockwise cw
 G3 	arc, circle, helix counter clockwise ccw
+G5          	spline
 G9 	general motion 
 
 G17  	xy plane 
@@ -1208,6 +1209,12 @@ G64 P Q L 	Path options
 	Q=naive cam tollerance
 	L=helix continuity
 
+# Spline valid gcode:
+G5              	x0 y0 z0 	# spline start point.	
+	x50 y50	# spline control point, newline
+	# more control points, newline.
+	x100 y0        # spline end point, newline
+G0 ...
 </string>
                </property>
               </widget>
