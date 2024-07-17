@@ -157,26 +157,36 @@ int gcode_parser::tokens_to_shapes(std::vector<gcode_line> &gcvec, std::vector<g
             int current_gcode = gcvec[i].gvec[j];
             if (current_gcode == 20) { // G20 - to use inches for length units.
                 to_inches = 1;
-            } else if (current_gcode == 21) { // G21 - to use millimeters for length units.
+            }
+            if (current_gcode == 21) { // G21 - to use millimeters for length units.
                 to_inches = 0;
-            } else if (current_gcode == 40) { // Tool compensation off.
+            }
+            if (current_gcode == 40) { // Tool compensation off.
                 offset_side = 0;
-            } else if (current_gcode == 41) { // Tool offset left of programmed path.
+            }
+            if (current_gcode == 41) { // Tool offset left of programmed path.
                 offset_side = 1;
-            } else if (current_gcode == 42) { // Tool offset right of programmed path.
+            }
+            if (current_gcode == 42) { // Tool offset right of programmed path.
                 offset_side = 2;
-            } else if (current_gcode == 17) { // G17 (Z-axis, XY-plane)
+            }
+            if (current_gcode == 17) { // G17 (Z-axis, XY-plane)
                 plane = 0;
-            } else if (current_gcode == 18) { // G18 (Y-axis, XZ-plane)
+            }
+            if (current_gcode == 18) { // G18 (Y-axis, XZ-plane)
                 plane = 1;
-            } else if (current_gcode == 19) { // G19 (X-axis, YZ-plane)
+            }
+            if (current_gcode == 19) { // G19 (X-axis, YZ-plane)
                 plane = 2;
-            } else if (current_gcode == 2 || current_gcode == 3) { // Spiral turns.
+            }
+            if (current_gcode == 2 || current_gcode == 3) { // Spiral turns.
                 turns = gcvec[i].p;
-            } else if (current_gcode == 64) { // G64
+            }
+            if (current_gcode == 64) { // G64
                 deviation = gcvec[i].p; // Path max deviation, tolerance.
                 tolerance = gcvec[i].q; // Naive cam tolerance. Filter out tiny segments.
-            } else if (current_gcode == 0 || current_gcode == 1 || current_gcode == 2 || current_gcode == 3 || current_gcode == 5 || current_gcode == 9) { // New shape found.
+            }
+            if (current_gcode == 0 || current_gcode == 1 || current_gcode == 2 || current_gcode == 3 || current_gcode == 5 || current_gcode == 9) { // New shape found.
                 shape.p0 = p;
                 shape.p1 = {gcvec[i].x, gcvec[i].y, gcvec[i].z};
                 shape.pvec.clear();
@@ -199,13 +209,16 @@ int gcode_parser::tokens_to_shapes(std::vector<gcode_line> &gcvec, std::vector<g
                 if (current_gcode == 0) { // G0 - rapid positioning
                     shape.shape_type = gcode_shape_type::line;
                     shape.aShape = draw_primitives::draw_3d_line(p, shape.p1, shape.length);
-                } else if (current_gcode == 1) { // G1 - linear interpolation
+                }
+                if (current_gcode == 1) { // G1 - linear interpolation
                     shape.shape_type = gcode_shape_type::line;
                     shape.aShape = draw_primitives::draw_3d_line(p, shape.p1, shape.length);
-                } else if (current_gcode == 2 || current_gcode == 3) { // G2, G3 - circular interpolation
+                }
+                if (current_gcode == 2 || current_gcode == 3) { // G2, G3 - circular interpolation
                     shape.shape_type = gcode_shape_type( draw_primitives::get_arc_shape_type(current_gcode, p, shape.p1) );
                     shape.aShape = draw_primitives::draw_3d_gcode_arc_circle_helix(p, shape.p1, current_gcode, plane, shape.ijk.X(), shape.ijk.Y(), shape.ijk.Z(), turns, 0, shape.pw, shape.length);
-                } else if (current_gcode == 5) { // G5 - spline interpolation
+                }
+                if (current_gcode == 5) { // G5 - spline interpolation
                     shape.shape_type = gcode_shape_type::spline;
                     shape.aShape = draw_primitives::draw_3d_spline_degree_3(shape.pvec, shape.length);
                 }
