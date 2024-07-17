@@ -165,7 +165,7 @@ inline void handle_mdi(shared_mem_data &shm){
 
 }
 
-std::vector<shape> svec;    // Gcode file shapes.
+std::vector<gcode_shape> svec;    // Gcode file shapes.
 scurve_data sctp_xyz;       // Scurve trajectory planner for xyz moves.
 scurve_data sctp_abc;       // Scurve trajectory planner for abc moves.
 double svec_nr=0;           // Current gcode line in the vector.
@@ -174,16 +174,16 @@ gp_Pnt pi;
 inline void process_rapids_to_starpos(shared_mem_data &shm){
 
     for(auto i:svec){ // Check if current position is at first gcode position. Otherwise insert moves to first gcode position.
-        if(i.lenght>0 && i.p0.Distance({shm.scd[0].guipos, shm.scd[1].guipos, shm.scd[2].guipos})!=0){
+        if(i.length>0 && i.p0.Distance({shm.scd[0].guipos, shm.scd[1].guipos, shm.scd[2].guipos})!=0){
 
             // Insert rapids from current pos to program startpos.
-            shape s0;
+            gcode_shape s0;
             s0.g_id=0;
             s0.shape_type=gcode_shape_type::line;
             s0.p0={shm.scd[0].guipos, shm.scd[1].guipos, shm.scd[2].guipos};
             s0.p1={shm.scd[0].guipos, shm.scd[1].guipos, svec[0].p0.Z()+5};
             s0.pw=draw_primitives::get_line_midpoint(s0.p0,s0.p1);
-            s0.lenght=s0.p0.Distance(s0.p1);
+            s0.length=s0.p0.Distance(s0.p1);
 
 
             s0.abc0={shm.scd[3].guipos, shm.scd[4].guipos, shm.scd[5].guipos};
@@ -192,26 +192,26 @@ inline void process_rapids_to_starpos(shared_mem_data &shm){
             s0.uvw0={shm.scd[6].guipos, shm.scd[7].guipos, shm.scd[8].guipos};
             s0.uvw1=s0.uvw0;
 
-            shape s1;
+            gcode_shape s1;
             s1.shape_type=gcode_shape_type::line;
             s1.g_id=0;
             s1.p0=s0.p1;
             s1.p1={svec[0].p0.X(),svec[0].p0.Y(),s0.p1.Z()};
             s1.pw=draw_primitives::get_line_midpoint(s1.p0,s1.p1);
-            s1.lenght=s1.p0.Distance(s1.p1);
+            s1.length=s1.p0.Distance(s1.p1);
 
             s1.abc0=s0.abc0;
             s1.abc1=s0.abc1;
             s1.uvw0=s0.uvw0;
             s1.uvw1=s1.uvw1;
 
-            shape s2;
+            gcode_shape s2;
             s2.g_id=0;
             s2.shape_type=gcode_shape_type::line;
             s2.p0=s1.p1;
             s2.p1=svec[0].p0;
             s2.pw=draw_primitives::get_line_midpoint(s2.p0,s2.p1);
-            s2.lenght=s2.p0.Distance(s2.p1);
+            s2.length=s2.p0.Distance(s2.p1);
 
             s2.abc0=s1.abc1; // Todo add lenght, comparision master move.
             s2.abc1={svec[0].abc0.X(),svec[0].abc0.Y(),svec[0].abc0.Z()};
@@ -234,12 +234,12 @@ inline void process_rapids_to_starpos(shared_mem_data &shm){
 
 inline void process_trajectory_lenghts(){
     // Calculate trajectory lengths for the vector
-    svec[0].lenght_end = 0;
+    svec[0].length_end = 0;
     double stot = 0;
     for (uint i = 0; i < svec.size(); i++) {
-        stot += svec[i].lenght;
-        svec[i].lenght_end = stot;
-        svec[i].lenght_begin = svec[i].lenght_end - svec[i].lenght;
+        stot += svec[i].length;
+        svec[i].length_end = stot;
+        svec[i].length_begin = svec[i].length_end - svec[i].length;
         // std::cout << "svec i:" << i << " length end:" << stot << std::endl;
     }
 }
@@ -255,7 +255,7 @@ inline int load_gcode_from_line(shared_mem_data &shm,int start_line) {
     std::vector<gcode_line> gvec;
     gcode_parser parser;
     parser.tokenize(file_name, gvec, 0);
-    parser.tokens_to_shapes(gvec, svec);
+    parser.tokens_to_shapes(gvec, svec, false);
     std::vector<Handle(AIS_Shape)> aisvec;
     parser.optimize_tooldir_path(svec,shm.tooldir_fillet,aisvec);
     aisvec.clear();
@@ -311,7 +311,7 @@ inline int load_gcode(shared_mem_data &shm) {
     std::string file_name(shm.file_name);
     std::vector<gcode_line> gvec;
     gcode_parser().tokenize(file_name,gvec,0);
-    gcode_parser().tokens_to_shapes(gvec, svec);
+    gcode_parser().tokens_to_shapes(gvec, svec, false);
     std::vector<Handle(AIS_Shape)> aisvec; // This is only for opencascade shape preview. We need this universal function to verify output.
     gcode_parser::optimize_tooldir_path(svec,shm.tooldir_fillet,aisvec);
     aisvec.clear();
@@ -380,13 +380,13 @@ inline void handle_auto(shared_mem_data &shm){
         sctp_xyz.intval=0.001;
 
         if(shm.run_mode==RUN && shm.auto_speed_procent>=0){
-            scurve_engine::jog(sctp_xyz,svec[svec_nr].lenght_end);
+            scurve_engine::jog(sctp_xyz,svec[svec_nr].length_end);
 
             // Move finished to end pos, increment gcode line.
-            if((sctp_xyz.guipos > svec[svec_nr].lenght_end - 1e-6) && svec_nr<svec.size()-1){
+            if((sctp_xyz.guipos > svec[svec_nr].length_end - 1e-6) && svec_nr<svec.size()-1){
 
                 // If xyz move has had no lenght, but abc has lenght, interupt process to perform the abc move now.
-                if(svec[svec_nr].lenght_begin==svec[svec_nr].lenght_end && !interupt_rotate_abc){
+                if(svec[svec_nr].length_begin==svec[svec_nr].length_end && !interupt_rotate_abc){
                     if(svec[svec_nr].abc0.Distance(svec[svec_nr].abc1)>0){ // Has diff in corner angles abc.
                         sctp_abc.guipos=0;
                         sctp_abc.tarpos=svec[svec_nr].abc0.Distance(svec[svec_nr].abc1);
@@ -401,13 +401,13 @@ inline void handle_auto(shared_mem_data &shm){
             }
         }
         if(shm.run_mode==RUN && shm.auto_speed_procent<0){
-            scurve_engine::jog(sctp_xyz,svec[svec_nr].lenght_begin);
+            scurve_engine::jog(sctp_xyz,svec[svec_nr].length_begin);
 
             // Move finished to be at start pos, decrement gcode line.
-            if((sctp_xyz.guipos < svec[svec_nr].lenght_begin + 1e-6)  && svec_nr>0){
+            if((sctp_xyz.guipos < svec[svec_nr].length_begin + 1e-6)  && svec_nr>0){
 
                 // If xyz move has had no lenght, but abc has lenght, interupt process to perform the abc move now.
-                if(svec[svec_nr].lenght_begin==svec[svec_nr].lenght_end){
+                if(svec[svec_nr].length_begin==svec[svec_nr].length_end){
                     if(svec[svec_nr].abc0.Distance(svec[svec_nr].abc1)>0 && !interupt_rotate_abc){ // Has diff in corner angles abc.
                         sctp_abc.guipos=svec[svec_nr].abc0.Distance(svec[svec_nr].abc0);
                         sctp_abc.tarpos=0;
@@ -429,6 +429,7 @@ inline void handle_auto(shared_mem_data &shm){
         gp_Pnt p0=svec[svec_nr].p0;
         gp_Pnt pw=svec[svec_nr].pw;
         gp_Pnt p1=svec[svec_nr].p1;
+        gp_Pnt pc=svec[svec_nr].pc;
 
         gp_Pnt abc0=svec[svec_nr].abc0;
         gp_Pnt abc1=svec[svec_nr].abc1;
@@ -438,16 +439,16 @@ inline void handle_auto(shared_mem_data &shm){
         gp_Pnt uvw1=svec[svec_nr].uvw1;
         gp_Pnt uvw_pi;
 
-        double progress=(sctp_xyz.guipos-svec[svec_nr].lenght_begin) /*lenght done*/ / svec[svec_nr].lenght;
+        double progress=(sctp_xyz.guipos-svec[svec_nr].length_begin) /*lenght done*/ / svec[svec_nr].length;
 
-        if(svec[svec_nr].lenght==0){ // Avoid NAN when svec lenght=0.
+        if(svec[svec_nr].length==0){ // Avoid NAN when svec lenght=0.
             progress=1;
         }
         // std::cout<<"progress:"<<progress<<std::endl;
 
         if(svec[svec_nr].shape_type==gcode_shape_type::line){
             draw_primitives::interpolate_point_on_line(p0,p1,progress,pi);
-            draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
+            draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi); // Used to get c-axis value.
 
             if(svec[svec_nr].pvec_final_tooldir_path.size()>0){
                 gp_Pnt ta;
@@ -472,14 +473,41 @@ inline void handle_auto(shared_mem_data &shm){
                 abc_pi={a,b,abc_pi.Z()};
                 shm.ta=ta;
             }
+            draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
+        }
+        if(svec[svec_nr].shape_type==gcode_shape_type::circle){
+            draw_primitives::interpolate_point_on_circle(p0,
+                                                         pc,
+                                                         svec[svec_nr].plane,
+                                                         svec[svec_nr].g_id,
+                                                         progress,pi);
+            draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
 
+            if(svec[svec_nr].pvec_final_tooldir_path.size()>0){
+                gp_Pnt ta;
+                draw_primitives::interpolate_point_on_pvec_path(svec[svec_nr].pvec_final_tooldir_path,svec[svec_nr].tooldir_final_lenght,progress,ta);
+                double a,b,c;
+                calculate_rotation_angles(pi,ta,a,b,c);
+                abc_pi={a,b,abc_pi.Z()};
+                shm.ta=ta;
+            }
             draw_primitives::interpolate_point_on_line(uvw0,uvw1,progress,uvw_pi);
         }
 
-        if(svec[svec_nr].shape_type==gcode_shape_type::circle){
-
-        }
         if(svec[svec_nr].shape_type==gcode_shape_type::spline){
+            draw_primitives::interpolate_point_on_spline_degree_3(svec[svec_nr].pvec,progress,pi);
+            draw_primitives::interpolate_point_on_line(abc0,abc1,progress,abc_pi);
+
+            if(svec[svec_nr].pvec_final_tooldir_path.size()>0){
+                gp_Pnt ta;
+                draw_primitives::interpolate_point_on_pvec_path(svec[svec_nr].pvec_final_tooldir_path,svec[svec_nr].tooldir_final_lenght,progress,ta);
+                double a,b,c;
+                calculate_rotation_angles(pi,ta,a,b,c);
+                abc_pi={a,b,abc_pi.Z()};
+                shm.ta=ta;
+            }
+        }
+        if(svec[svec_nr].shape_type==gcode_shape_type::circle){
 
         }
         if(svec[svec_nr].shape_type==gcode_shape_type::clothoid){
@@ -537,8 +565,18 @@ inline void handle_auto(shared_mem_data &shm){
             if(svec[svec_nr].g_id==2 || svec[svec_nr].g_id==3 ){
 
                 if(progress<0.999){
-                    draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress,v0);
-                    draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress+0.001,v1);
+                    if(svec[svec_nr].shape_type==gcode_shape_type::arc){
+                        draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress,v0); // Get the c-axis rotation from a vector.
+                        draw_primitives::interpolate_point_on_arc(p0,pw,p1,progress+0.001,v1);
+                    }
+                    if(svec[svec_nr].shape_type==gcode_shape_type::circle){
+                        draw_primitives::interpolate_point_on_circle(p0,pc,svec[svec_nr].plane,svec[svec_nr].g_id,progress,v0);
+                        draw_primitives::interpolate_point_on_circle(p0,pc,svec[svec_nr].plane,svec[svec_nr].g_id,progress+0.001,v1);
+                    }
+                    if(svec[svec_nr].shape_type==gcode_shape_type::helix){
+
+                    }
+
                     pn=v0; // Normal, point on z axis.
                     pn.SetZ(v0.Z()+1);
                     v2=draw_primitives::rotate_point_around_line(v1,90*DEG_TO_RAD,v0,pn);
@@ -548,11 +586,24 @@ inline void handle_auto(shared_mem_data &shm){
             if(v0.Distance(v1)>0){
                 tangential_knife_angle=draw_primitives::get_2d_line_angle_xy(v0,v1);
 
+                double angle_x=shm.tangential_angle_x;
+                double angle_y=shm.tangential_angle_y;
+
+                if(svec[svec_nr].offset_side==0){ // G40 Tool compensation off.
+                    angle_x=0, angle_y=0;
+                }
+                if(svec[svec_nr].offset_side==1){ // G41 Tool offset left of programmed path.
+
+                }
+                if(svec[svec_nr].offset_side==2){ // G42 Tool offset right of programmed path.
+                    angle_x*=-1;
+                    angle_y*=-1;
+                }
 
                 // Get the pn (ta) point for the x axis.
-                pn=draw_primitives::rotate_point_around_line(pn,shm.tangential_angle_x,v0,v1);
+                pn=draw_primitives::rotate_point_around_line(pn,angle_x,v0,v1);
                 // Get the pn (ta) point for the y axis.
-                pn=draw_primitives::rotate_point_around_line(pn,shm.tangential_angle_y,v0,v2);
+                pn=draw_primitives::rotate_point_around_line(pn,angle_y,v0,v2);
 
                 calculate_rotation_angles(v0,pn,aa,bb,cc);
             }

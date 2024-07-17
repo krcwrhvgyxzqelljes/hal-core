@@ -34,40 +34,44 @@ public:
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;
+
+    std::vector<double> gvec;
+    std::vector< std::pair<char,double> > pvec;
 };
 
 typedef gp_Pnt gp_Abc;
 typedef gp_Pnt gp_Uvw;
+typedef gp_Pnt gp_Ijk;
 
 enum gcode_shape_type {
-    point=0,
-    line=1,
-    arc=2,
-    circle=3,
-    helix=4,
-    clothoid=5,
-    spline=5
+    point,
+    line,
+    arc,
+    circle,
+    helix,
+    clothoid,
+    spline,
+    general
 };
 
-struct shape {
+const double tooldir_height=15;
+
+struct gcode_shape {
     int g_id=0;                 // Line, arc, rapic, general.
-    int e_id;                   // G9 identifyer for line, arc, clothoid, etc.
     gp_Pnt p0={0,0,0},pw,p1;    // Start, way, end point.
     gp_Pnt pc,pn;               // Center, Point on normal axis.
     int plane;                  // Plane for circle.
-    std::vector<gp_Pnt> pwvec;  // Vector of spline points. p0,pw,p1 are unused for splines.
+    std::vector<gp_Pnt> pvec;   // Vector of points.
     double radius;
-    double lenght;              // Lenght of this shape.
-    double lenght_begin;
-    double lenght_end;          // Trajtectory end lenght of this shape in the vector.
+    double length;              // Lenght of this shape.
+    double length_begin;
+    double length_end;          // Trajtectory end lenght of this shape in the vector.
     double theta0, theta1;
     double curva0, curva1;
-    double turns;               // Spiral, helix nr of turns. Input integer.
-    double g2_continuity;       // Spiral, helix g2 continuity model. 1=on.
-    int gcode_line;             // Gcode line nr of file.
 
     gp_Abc abc0,abc1;
     gp_Uvw uvw0,uvw1;
+    gp_Ijk ijk;
 
     double feed;
     double spindle_speed;
@@ -87,9 +91,13 @@ struct shape {
     std::vector<gp_Pnt> pvec_final_tooldir_path;
     double tooldir_final_lenght;
 
-    double g64_p;
-    double g64_q;
-    int path_offset_dir;        // G40=0 (no offset), G41=1 (left offset), G42=2 (right offset).
+    double deviation;
+    double tolerance;
+    int offset_side=0;        // G40=0 (no offset), G41=1 (left offset), G42=2 (right offset).
+    double turns;               // Spiral, helix nr of turns. Input integer.
+    double g2_continuity;       // Spiral, helix g2 continuity model. 1=on.
+    int gcode_line;             // Gcode line nr of file.
+    int to_inches;
 };
 
 struct gcode_limits {
@@ -106,11 +114,11 @@ public:
 
     std::pair<std::string, double> split_token(std::string token);
     gcode_line process_token(const std::string &token, gcode_line gc, bool &inComment, std::string &comment);
-    int tokenize(const std::string& filename, std::vector<gcode_line> &gvec, int debug);
-    int tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec);
+    int tokenize(const std::string& filename, std::vector<gcode_line> &gcode_vec, const int &debug);
+    int tokens_to_shapes(std::vector<gcode_line> &gcvec, std::vector<gcode_shape> &svec, const int &debug);
     static int process_limits(const std::vector<gcode_line> &gvec, gcode_limits &limits);
-    static int optimize_tooldir_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec);
-    static int optimize_tcp_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec);
+    static int optimize_tooldir_path(std::vector<gcode_shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec);
+    static int optimize_tcp_path(std::vector<gcode_shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec);
 
 private:
 };

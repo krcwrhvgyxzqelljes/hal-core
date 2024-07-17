@@ -5,6 +5,9 @@
 #include <iomanip> // For std::fixed and std::setprecision
 #include "draw_primitives.h"
 
+#define mm_to_inch 0.03937008;
+#define inch_to_mm 25.4;
+
 gcode_parser::gcode_parser(){ }
 
 // Function to split a token like "G64" into a pair ('G', 64)
@@ -14,38 +17,29 @@ std::pair<std::string, double> gcode_parser::split_token(std::string token) {
     return std::make_pair(letter, value);
 }
 
-int gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line> &gvec, int debug) {
-    gvec.clear();  // Clear the vector to ensure it's empty before starting
+int gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line> &gcode_vec, const int &debug) {
+    gcode_vec.clear();  // Clear the vector to ensure it's empty before starting
 
     std::string gcode = std_functions().read_file_to_string(filename);
     gcode = std_functions().string_to_lower(gcode);
     gcode = std_functions().remove_spaces(gcode);
 
-
-    std::vector<std::pair<std::string, double>> pairvec = std_functions().parse_string_to_key_and_value(gcode, 0);
+    std::vector<std::pair<std::string, double>> pairvec = std_functions().parse_string_to_key_and_value(gcode, debug);
 
     gcode_line gc;
     for(auto pair:pairvec){
 
         if(pair.first=="newline"){
-            gvec.push_back(gc);
-            gc.i=0;
-            gc.j=0;
-            gc.k=0;
+            gcode_vec.push_back(gc);
+            gc.gvec.clear();
+            gc.pvec.clear();
         }
         if(pair.first=="n"){
             gc.n=pair.second;
         }
         if(pair.first=="g"){
             gc.g=pair.second;
-
-            if(gc.g==17 || gc.g==18 || gc.g==19 || gc.g==20 || gc.g==21){
-                // gvec.push_back(gc);
-            }
-
-            if(gc.g==64){
-
-            }
+            gc.gvec.push_back(gc.g);
         }
         if(pair.first=="p"){ // Used for spirals nr of turns. Used for G64 P..
             gc.p=pair.second;
@@ -57,13 +51,16 @@ int gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line> 
             gc.l=pair.second;
         }
         if(pair.first=="x"){
-            gc.x=pair.second;
+            gc.x=pair.second; // Keep track of the last coordinates.
+            gc.pvec.push_back({'x',gc.x}); // Multiple spline input points
         }
         if(pair.first=="y"){
             gc.y=pair.second;
+            gc.pvec.push_back({'y',gc.y});
         }
         if(pair.first=="z"){
             gc.z=pair.second;
+            gc.pvec.push_back({'z',gc.z});
         }
 
         if(pair.first=="i"){
@@ -86,7 +83,6 @@ int gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line> 
             gc.c=pair.second;
         }
 
-
         if(pair.first=="u"){
             gc.u=pair.second;
         }
@@ -97,201 +93,137 @@ int gcode_parser::tokenize(const std::string &filename, std::vector<gcode_line> 
             gc.w=pair.second;
         }
     }
-    gvec.push_back(gc);
+    gcode_vec.push_back(gc);
 
-    if(debug){
-        for(auto line:gvec){
-            std::cout<<"n:"<<line.n<<" g:"<<line.g
-                    <<" x: "<<line.x<<" y:"<<line.y<<" z:"<<line.z
-                   <<" a: "<<line.a<<" b:"<<line.b<<" c:"<<line.c
-                  <<" i:"<<line.i<<" j:"<<line.j<<" k:"<<line.k
-                 <<std::endl;
-        }
-    }
     return 1;
 }
 
-int gcode_parser::tokens_to_shapes(const std::vector<gcode_line> &gvec, std::vector<shape> &svec){
+int gcode_parser::tokens_to_shapes(std::vector<gcode_line> &gcvec, std::vector<gcode_shape> &svec, const int &debug) {
+    gp_Pnt p = {0, 0, 0};
+    gp_Abc abc = {0, 0, 0};
+    gp_Uvw uvw = {0, 0, 0};
+    std::vector<gp_Pnt> pvec;
 
-    gp_Pnt p={0,0,0};
-    gp_Abc abc={0,0,0};
-    gp_Uvw uvw={0,0,0};
+    gcode_shape shape;
+    int plane = 0;
+    int turns = 0; // For spirals, they use the P word for number of turns.
+    int to_inches = 0;
+    double deviation = 0;
+    double tolerance = 0;
+    int offset_side = 0;
+    int line = 1;
+    int gid = -1;
 
-    shape sha;
+    for (size_t i = 0; i < gcvec.size(); i++) {
+        // Convert the multi input for gcode line x, y, z into gp_Pnt vec.
+        pvec.clear();
+        pvec.push_back(p);
+        double x = p.X(), y = p.Y(), z = p.Z();
+        for (size_t j = 0; j < gcvec[i].pvec.size(); j++) { // std::vector<std::pair<char, double>> pvec
+            if (gcvec[i].pvec[j].first == 'x') {
+                x = gcvec[i].pvec[j].second;
+            }
+            if (gcvec[i].pvec[j].first == 'y') {
+                y = gcvec[i].pvec[j].second;
+            }
+            if (gcvec[i].pvec[j].first == 'z') {
+                z = gcvec[i].pvec[j].second;
+            }
 
-#define mm_to_inch 0.03937008;
-#define inch_to_mm 25.4;
-    int plane=0;
-    int turns=0; // For spirals, they use the P word for nr of turns.
-    int to_inches=0;
-    double g64_p=0;
-    double g64_q=0;
-    int path_offset_dir=0;
+            if (j < gcvec[i].pvec.size() - 1) {
+                // Create groups.
+                if ((gcvec[i].pvec[j].first == 'x' && gcvec[i].pvec[j + 1].first == 'x') ||
+                    (gcvec[i].pvec[j].first == 'y' && gcvec[i].pvec[j + 1].first == 'y') ||
+                    (gcvec[i].pvec[j].first == 'y' && gcvec[i].pvec[j + 1].first == 'x') ||
+                    (gcvec[i].pvec[j].first == 'z' && gcvec[i].pvec[j + 1].first == 'x') ||
+                    (gcvec[i].pvec[j].first == 'z' && gcvec[i].pvec[j + 1].first == 'y') ||
+                    (gcvec[i].pvec[j].first == 'z' && gcvec[i].pvec[j + 1].first == 'z')) {
+                    pvec.push_back({x, y, z});
+                }
+            }
 
-    int line=1;
-    int spline_start=0;
-    for(auto g:gvec){
-
-        if(g.g==20){ // G20 - to use inches for length units.
-            to_inches=1;
-        }
-        if(g.g==21){ // G21 - to use millimeters for length units.
-            to_inches=0;
-        }
-
-        if(g.g==40){ // Tool compensation off, we can use this for tangential knife or plasma, to set the cut compensation on a,b axis.
-            path_offset_dir=0;
-        }
-        if(g.g==41){ // Tool offset left of programmed path.
-            path_offset_dir=1;
-        }
-        if(g.g==42){ // Tool offset right of programmed path.
-            path_offset_dir=2;
-        }
-
-        if(g.g==17){ // G17 (Z-axis, XY-plane)
-            plane=0;
-        }
-        if(g.g==18){ // G18 (Y-axis, XZ-plane)
-            plane=1;
-        }
-        if(g.g==19){ // G19 (X-axis, YZ-plane)
-            plane=2;
-        }
-
-        if(g.g==64){ // G64
-            g64_p=g.p; // Path max deviation, tollerance.
-            g64_q=g.q; // Naive cam tollerance. Filter out tiny segments.
+            if (j == gcvec[i].pvec.size() - 1) {
+                pvec.push_back({x, y, z});
+            }
         }
 
-        if(to_inches){
-            g.x=g.x*inch_to_mm;
-            g.y=g.y*inch_to_mm;
-            g.z=g.z*inch_to_mm;
-            g.a=g.a*inch_to_mm;
-            g.b=g.b*inch_to_mm;
-            g.c=g.c*inch_to_mm;
-            g.u=g.u*inch_to_mm;
-            g.v=g.v*inch_to_mm;
-            g.w=g.w*inch_to_mm;
-            g.i=g.i*inch_to_mm;
-            g.j=g.j*inch_to_mm;
-            g.k=g.k*inch_to_mm;
+        // If no G-code identifier in the current line, use the previous one
+        if (gcvec[i].gvec.empty() && gid != -1) {
+            gcvec[i].gvec.push_back(gid);
         }
 
-        if(g.g==0 || g.g==1 || g.g==2 || g.g==3 || g.g==9){ // New shape found.
-            svec.push_back(sha);
-            svec.back().gcode_line=line;
-            svec.back().g_id=g.g;
-            spline_start=0; // Reset flag.
-        }
-        if(g.g==5 && !spline_start){ // New shape found.
-            svec.push_back(sha);
-            svec.back().gcode_line=line;
-            svec.back().g_id=g.g;
-            spline_start=1; // Reset flag.
-        }
+        // Update active G-codes
+        for (size_t j = 0; j < gcvec[i].gvec.size(); j++) {
+            int current_gcode = gcvec[i].gvec[j];
+            if (current_gcode == 20) { // G20 - to use inches for length units.
+                to_inches = 1;
+            } else if (current_gcode == 21) { // G21 - to use millimeters for length units.
+                to_inches = 0;
+            } else if (current_gcode == 40) { // Tool compensation off.
+                offset_side = 0;
+            } else if (current_gcode == 41) { // Tool offset left of programmed path.
+                offset_side = 1;
+            } else if (current_gcode == 42) { // Tool offset right of programmed path.
+                offset_side = 2;
+            } else if (current_gcode == 17) { // G17 (Z-axis, XY-plane)
+                plane = 0;
+            } else if (current_gcode == 18) { // G18 (Y-axis, XZ-plane)
+                plane = 1;
+            } else if (current_gcode == 19) { // G19 (X-axis, YZ-plane)
+                plane = 2;
+            } else if (current_gcode == 2 || current_gcode == 3) { // Spiral turns.
+                turns = gcvec[i].p;
+            } else if (current_gcode == 64) { // G64
+                deviation = gcvec[i].p; // Path max deviation, tolerance.
+                tolerance = gcvec[i].q; // Naive cam tolerance. Filter out tiny segments.
+            } else if (current_gcode == 0 || current_gcode == 1 || current_gcode == 2 || current_gcode == 3 || current_gcode == 5 || current_gcode == 9) { // New shape found.
+                shape.p0 = p;
+                shape.p1 = {gcvec[i].x, gcvec[i].y, gcvec[i].z};
+                shape.pvec.clear();
+                shape.pvec = pvec;
+                shape.abc0 = abc;
+                shape.abc1 = {gcvec[i].a, gcvec[i].b, gcvec[i].c};
+                shape.uvw0 = uvw;
+                shape.uvw1 = {gcvec[i].u, gcvec[i].v, gcvec[i].w};
+                shape.ijk = {gcvec[i].i, gcvec[i].j, gcvec[i].k};
+                shape.plane = plane;
+                shape.deviation = deviation;
+                shape.tolerance = tolerance;
+                shape.offset_side = offset_side;
+                shape.turns = turns;
+                shape.to_inches = to_inches;
+                shape.gcode_line = line;
+                shape.g_id = current_gcode;
+                shape.shape_type = gcode_shape_type::general;
 
+                if (current_gcode == 0) { // G0 - rapid positioning
+                    shape.shape_type = gcode_shape_type::line;
+                    shape.aShape = draw_primitives::draw_3d_line(p, shape.p1, shape.length);
+                } else if (current_gcode == 1) { // G1 - linear interpolation
+                    shape.shape_type = gcode_shape_type::line;
+                    shape.aShape = draw_primitives::draw_3d_line(p, shape.p1, shape.length);
+                } else if (current_gcode == 2 || current_gcode == 3) { // G2, G3 - circular interpolation
+                    shape.shape_type = gcode_shape_type( draw_primitives::get_arc_shape_type(current_gcode, p, shape.p1) );
+                    shape.aShape = draw_primitives::draw_3d_gcode_arc_circle_helix(p, shape.p1, current_gcode, plane, shape.ijk.X(), shape.ijk.Y(), shape.ijk.Z(), turns, 0, shape.pw, shape.length);
+                } else if (current_gcode == 5) { // G5 - spline interpolation
+                    shape.shape_type = gcode_shape_type::spline;
+                    shape.aShape = draw_primitives::draw_3d_spline_degree_3(shape.pvec, shape.length);
+                }
 
-        if(g.e>0){
-            svec.back().e_id=g.e;
-        }
+                shape.aShape=draw_primitives::colorize(shape.aShape, Quantity_NOC_ANTIQUEWHITE, 0);
+                svec.push_back(shape);
 
-        if(svec.back().g_id==0){
-            svec.back().feed=INFINITY;
-        }
-        if(svec.back().g_id==1){
-            svec.back().feed=g.f;
-        }
-
-        if(svec.back().g_id==0 || svec.back().g_id==1){ // Draw rapid or line feed.
-            svec.back().p0=p;
-            svec.back().p1={g.x,g.y,g.z};
-            svec.back().abc0=abc;
-            svec.back().abc1={g.a,g.b,g.c};
-            svec.back().uvw0=uvw;
-            svec.back().uvw1={g.u,g.v,g.w};
-
-            svec.back().aShape=draw_primitives::draw_3d_gcode_line(svec.back().p0, svec.back().p1, svec.back().g_id, svec.back().pw);
-
-            // Here we calculate point ta0 & ta1. This is a tooldir point on the tooldir axis.
-            draw_primitives::draw_3d_line_vector(svec.back().p0,15,svec.back().abc0.X(),svec.back().abc0.Y(),svec.back().abc0.Z(),svec.back().ta0);
-            draw_primitives::draw_3d_line_vector(svec.back().p1,15,svec.back().abc1.X(),svec.back().abc1.Y(),svec.back().abc1.Z(),svec.back().ta1);
-
-            svec.back().lenght=svec.back().p0.Distance(svec.back().p1);
-            svec.back().g64_p=g64_p;
-            svec.back().g64_q=g64_q;
-            svec.back().path_offset_dir=path_offset_dir;
-            svec.back().shape_type=gcode_shape_type::line;
-        }
-
-        // Arc, circle or helix.
-        if(svec.back().g_id==2 || svec.back().g_id==3){ // Draw arc G2 or G3. Draw spiral G2 or G3
-            svec.back().p0=p;
-            svec.back().p1={g.x,g.y,g.z};
-            svec.back().abc0=abc;
-            svec.back().abc1={g.a,g.b,g.c};
-            svec.back().uvw0=uvw;
-            svec.back().uvw1={g.u,g.v,g.w};
-            svec.back().turns=g.p; // Set helix turns.
-            svec.back().g2_continuity=g.l; // Set helix G2 continuity model.
-            svec.back().aShape=draw_primitives::draw_3d_gcode_arc_circle_helix(svec.back().p0, svec.back().p1, plane, svec.back().g_id, g.i, g.j, g.k,
-                                                                               svec.back().turns, svec.back().g2_continuity, svec.back().pw);
-
-            // Here we calculate point ta0 & ta1. This is a tooldir point on the tooldir axis.
-            draw_primitives::draw_3d_line_vector(svec.back().p0,15,svec.back().abc0.X(),svec.back().abc0.Y(),svec.back().abc0.Z(),svec.back().ta0);
-            draw_primitives::draw_3d_line_vector(svec.back().p1,15,svec.back().abc1.X(),svec.back().abc1.Y(),svec.back().abc1.Z(),svec.back().ta1);
-
-            // Todo calculate helix lenght.
-            svec.back().lenght=draw_primitives::get_3d_arc_lenght(svec.back().p0,svec.back().pw,svec.back().p1);
-            svec.back().g64_p=g64_p;
-            svec.back().g64_q=g64_q;
-            svec.back().path_offset_dir=path_offset_dir;
-            svec.back().shape_type=gcode_shape_type( draw_primitives::get_arc_shape_type(plane,svec.back().p0,svec.back().p1) );
+                p = shape.p1;
+                abc = shape.abc1;
+                uvw = shape.uvw1;
+                line++;
+            }
         }
 
-        // Clothoid.
-        if(svec.back().g_id==9){
-            svec.back().p0=p;
-            svec.back().p1={g.x,g.y,g.z};
-            svec.back().abc0=abc;
-            svec.back().abc1={g.a,g.b,g.c};
-            svec.back().uvw0=uvw;
-            svec.back().uvw1={g.u,g.v,g.w};
-
-            std::cout<<"gcode parser: no clothoid produced."<<std::endl;
+        if (!gcvec[i].gvec.empty()) {
+            gid = gcvec[i].gvec.back();
         }
-
-        // Spline.
-        /*
-            # Spline valid gcode:
-            G5  x0 y0 z0 	# spline start point.
-                x50 y50     # spline control point, newline
-                ..          # more control points, newline.
-                x100 y0     # spline end point, newline
-         */
-        if(spline_start==1){
-
-            svec.back().p0=p;               // Unused.
-            svec.back().p1={g.x,g.y,g.z};   // Unused.
-            svec.back().abc0=abc;
-            svec.back().abc1={g.a,g.b,g.c};
-            svec.back().uvw0=uvw;
-            svec.back().uvw1={g.u,g.v,g.w};
-
-            svec.back().pwvec.push_back({g.x,g.y,g.z}); // Add spline points.
-            draw_primitives::filter_out_duplicate_points(svec.back().pwvec);
-
-            svec.back().aShape=draw_primitives::draw_3d_spline_degree_3(svec.back().pwvec);
-            svec.back().aShape=draw_primitives::colorize( svec.back().aShape, Quantity_NOC_GRAY50, 0.8);
-        }
-
-        p=svec.back().p1;
-        abc=svec.back().abc1;
-        uvw=svec.back().uvw1;
-        line++;
     }
-
     return 1;
 }
 
@@ -334,11 +266,15 @@ int gcode_parser::process_limits(const std::vector<gcode_line> &gvec, gcode_limi
     return 1;
 }
 
-int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec){
+int gcode_parser::optimize_tooldir_path(std::vector<gcode_shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec){
+
+    if(fillet==0){
+        return 0;
+    }
 
     int first=0, last=0;
     for(uint i=0; i<svec.size(); i++){
-        if ( (svec[i].g_id == 0 || svec[i].g_id == 1 || svec[i].g_id == 2 || svec[i].g_id == 3) && svec[i].lenght>0 ) {
+        if ( (svec[i].g_id == 0 || svec[i].g_id == 1 || svec[i].g_id == 2 || svec[i].g_id == 3 || svec[i].g_id == 5 ) && svec[i].length>0 ) {
             last=i;
         }
     }
@@ -350,7 +286,7 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet,
         aisvec.push_back( i.aShape_tooldir_1);
 
         // Recorded tooldir path preview.
-        if ( (i.g_id == 0 || i.g_id == 1) && i.lenght>0 ) {
+        if ( (i.g_id == 0 || i.g_id == 1) && i.length>0 ) {
             std::vector<gp_Pnt> pvec = draw_primitives::record_tooldir_path_line(i.p0, i.p1, i.abc0, i.abc1, 15);
             i.pvec_tooldir_path = draw_primitives::trim_recorded_tooldir_path_line_both_sides( pvec, fillet);
             if(!first){
@@ -361,8 +297,17 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet,
                 i.pvec_tooldir_path.back()=i.ta1; // Don't trim the last gcode segment.
             }
         }
-        else if ( (i.g_id == 2 || i.g_id == 3) && i.lenght>0 ) {
-            std::vector<gp_Pnt> pvec = draw_primitives::record_tooldir_path_arc(i.p0, i.pw, i.p1, i.abc0, i.abc1, 15);
+        else if ( (i.g_id == 2 || i.g_id == 3) && i.length>0 ) {
+            std::vector<gp_Pnt> pvec;
+            if(i.shape_type==gcode_shape_type::arc){
+                pvec = draw_primitives::record_tooldir_path_arc(i.p0, i.pw, i.p1, i.abc0, i.abc1, 15);
+            }
+            if(i.shape_type==gcode_shape_type::circle){
+                pvec = draw_primitives::record_tooldir_path_circle(i.p0, i.pc, i.plane, i.g_id, i.abc0, i.abc1, 15);
+            }
+            if(i.shape_type==gcode_shape_type::helix){
+
+            }
             i.pvec_tooldir_path = draw_primitives::trim_recorded_tooldir_path_line_both_sides( pvec, fillet);
             if(!first){
                 i.pvec_tooldir_path[0]=i.p0;
@@ -371,7 +316,18 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet,
             if(count==last){
                 i.pvec_tooldir_path.back()=i.ta1;
             }
+        }  else if (i.g_id == 5 && i.length>0 ) {
+            std::vector<gp_Pnt> pvec = draw_primitives::record_tooldir_path_spline_degree_3(i.pvec, i.abc0, i.abc1, 15);
+            i.pvec_tooldir_path = draw_primitives::trim_recorded_tooldir_path_line_both_sides( pvec, fillet);
+            if(!first){
+                i.pvec_tooldir_path[0]=i.pvec.front();
+                first=1;
+            }
+            if(count==last){
+                i.pvec_tooldir_path.back()=i.ta1;
+            }
         }
+
         if(i.pvec_tooldir_path.size()>0){ // Draw result.
             aisvec.push_back( draw_primitives::colorize( draw_primitives::draw_3d_line_wire_low_memory_usage( i.pvec_tooldir_path) , Quantity_NOC_BLUE, 0) );
         }
@@ -381,21 +337,30 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet,
     // Draw tooldir path fillets.
     int i=0, j=0;
     for (i = 0; i < svec.size() - 1; i++) {
-        if(svec[i].lenght>0){
+        if(svec[i].length>0){
             for (j = i+1; j < svec.size(); j++) {
-                if(svec[j].lenght>0){
+                if(svec[j].length>0){
 
                     // Generate spline waypoints.
                     gp_Pnt p0 = svec[i].pvec_tooldir_path[svec[i].pvec_tooldir_path.size() - 2];
                     gp_Pnt p1 = svec[i].pvec_tooldir_path[svec[i].pvec_tooldir_path.size() - 1];
                     gp_Pnt p2;
                     double dist0=p0.Distance(p1);
+
+                    int c=3; // In some cases a line was drawn, spline fillet failed. This had to do with p0 to p1 dist was zero.
+                    while (dist0 == 0 && c <= svec[i].pvec_tooldir_path.size()) {
+                        p0 = svec[i].pvec_tooldir_path[svec[i].pvec_tooldir_path.size() - c];
+                        dist0 = p0.Distance(p1);
+                        c++;
+                    }
+
                     draw_primitives::offset_3d_point_on_line(p0,p1,dist0+0.001,p2);
 
                     gp_Pnt p3 = svec[j].pvec_tooldir_path[0];
                     gp_Pnt p4 = svec[j].pvec_tooldir_path[1];
                     gp_Pnt p5;
                     double dist1=p3.Distance(p4);
+
                     draw_primitives::offset_3d_point_on_line(p4,p3,dist1+0.001,p5);
 
                     if(p1.Distance(p2)>0 && p5.Distance(p3)>0){
@@ -497,7 +462,7 @@ int gcode_parser::optimize_tooldir_path(std::vector<shape> &svec, double fillet,
     return 1;
 }
 
-int gcode_parser::optimize_tcp_path(std::vector<shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec){
+int gcode_parser::optimize_tcp_path(std::vector<gcode_shape> &svec, double fillet, std::vector<Handle(AIS_Shape)> &aisvec){
 
     // First get the shape type.
     // Line G0-G1, Arc G2-G3, Spline G.. , Helix G2-G3 + Zdiff, Clothoid G9.

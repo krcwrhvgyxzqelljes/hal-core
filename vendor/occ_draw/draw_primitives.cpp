@@ -81,9 +81,9 @@ Handle(AIS_Shape) draw_primitives::draw_2d_circle(gp_Pnt center,double radius){
     gp_Dir dir(0,0,1);
     gp_Circ circle(gp_Ax2( center, dir),radius);
     BRepBuilderAPI_MakeEdge makeEdge(circle);
-    Handle(AIS_Shape) shape = new AIS_Shape(TopoDS_Edge());
-    shape ->Set(makeEdge.Edge());
-    return shape;
+    Handle(AIS_Shape) gcode_shape = new AIS_Shape(TopoDS_Edge());
+    gcode_shape ->Set(makeEdge.Edge());
+    return gcode_shape;
 }
 
 Handle(AIS_Shape) draw_primitives::draw_cp_2d_arc(gp_Pnt center, gp_Pnt point1, gp_Pnt point2){
@@ -200,7 +200,7 @@ turns =
 */
 Handle(AIS_Shape) draw_primitives::draw_2d_gcode_G2_helix(const gp_Pnt& p0, const gp_Pnt& p1, const int& plane,
                                                           const double& i, const double& j, const double& k ,
-                                                          const int& turns, const int& g2_continuity) {
+                                                          const int& turns, const int& g2_continuity, double &lenght) {
 
     // Validate
     if(plane==0 && p0.Z()==p1.Z()){
@@ -338,13 +338,16 @@ Handle(AIS_Shape) draw_primitives::draw_2d_gcode_G2_helix(const gp_Pnt& p0, cons
             pvec.push_back({x, y, z});
         }
     }
+
+    lenght=get_3d_pvec_lenght(pvec);
+
     return draw_3d_line_wire(pvec);
 }
 
 // For info see G2 helix.
 Handle(AIS_Shape) draw_primitives::draw_2d_gcode_G3_helix(const gp_Pnt& p0, const gp_Pnt& p1, const int& plane,
                                                           const double& i, const double& j, const double& k,
-                                                          const int& turns, const int& g2_continuity) {
+                                                          const int& turns, const int& g2_continuity, double &lenght){
 
     // Validate
     if(plane==0 && p0.Z()==p1.Z()){
@@ -467,20 +470,23 @@ Handle(AIS_Shape) draw_primitives::draw_2d_gcode_G3_helix(const gp_Pnt& p0, cons
         }
         pvec.push_back({x, y, z});
     }
+
+    lenght=get_3d_pvec_lenght(pvec);
+
     return draw_3d_line_wire(pvec);
 }
 
 Handle(AIS_Shape) draw_primitives::draw_2d_gcode_G2_G3_helix(const gp_Pnt& p0, const gp_Pnt& p1, const int& plane,const int& gcode,
                                                              const double& i, const double& j, const double& k,
-                                                             const int& turns, const int& g2_continuity){
+                                                             const int& turns, const int& g2_continuity, double &lenght){
 
     std::cout<<"helix g2_continuity status:"<<g2_continuity<<std::endl;
 
     if(gcode==2){
-        return draw_2d_gcode_G2_helix(p0,p1,plane,i,j,k,turns,g2_continuity);
+        return draw_2d_gcode_G2_helix(p0,p1,plane,i,j,k,turns,g2_continuity,lenght);
     }
     if(gcode==3){
-        return draw_2d_gcode_G3_helix(p0,p1,plane,i,j,k,turns,g2_continuity);
+        return draw_2d_gcode_G3_helix(p0,p1,plane,i,j,k,turns,g2_continuity,lenght);
     }
     std::cout<<"Error, helix has wrong gcode id."<<std::endl;
     return draw_3d_point(p0);
@@ -852,6 +858,12 @@ Handle(AIS_Shape) draw_primitives::colorize(Handle(AIS_Shape) shape, Quantity_Co
     return shape;
 }
 
+Handle(AIS_Shape) draw_primitives::show_boundary(Handle(AIS_Shape) aShape, int status){
+    aShape->Attributes()->SetFaceBoundaryDraw(status);
+    aShape->Attributes()->SetFaceBoundaryAspect(new Prs3d_LineAspect(Quantity_NOC_BLACK, Aspect_TOL_SOLID, 1.));
+    return aShape;
+}
+
 // Draw 3d primitives:
 Handle(AIS_Shape) draw_primitives::draw_3d_point(gp_Pnt point){
     TopoDS_Vertex vertex = BRepBuilderAPI_MakeVertex(point);
@@ -863,6 +875,17 @@ Handle(AIS_Shape) draw_primitives::draw_3d_line(const gp_Pnt &p0, const gp_Pnt &
     if(p0.Distance(p1)<1e-12){
         return draw_3d_point(p0);
     }
+    TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(p0,p1);
+    return new AIS_Shape(edge);
+}
+
+Handle(AIS_Shape) draw_primitives::draw_3d_line(const gp_Pnt &p0, const gp_Pnt &p1, double &lenght){
+
+    lenght=p0.Distance(p1);
+    if(lenght<1e-12){
+        return draw_3d_point(p0);
+    }
+
     TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(p0,p1);
     return new AIS_Shape(edge);
 }
@@ -1066,7 +1089,7 @@ gcode arc center:
     k=gcode K, center offset for z, seen from arc startpoint.
 */
 gp_Pnt draw_primitives::get_circle_center(const gp_Pnt& p0, const int& plane,
-                         const double& i, const double& j, const double& k, gp_Pnt &pc){
+                                          const double& i, const double& j, const double& k, gp_Pnt &pc){
 
     if(plane==0){
         pc={p0.X()+i, p0.Y()+j, p0.Z()};
@@ -1104,13 +1127,15 @@ turns:
 */
 Handle(AIS_Shape) draw_primitives::draw_3d_gcode_arc_circle_helix(const gp_Pnt& p0, const gp_Pnt& p1, const int& plane, const int& gcode,
                                                                   const double& i, const double& j, const double& k,
-                                                                  const int& turns, const int& g2_continuity, gp_Pnt &pw){
+                                                                  const int& turns, const int& g2_continuity, gp_Pnt &pw, double &lenght){
 
+    pw={0,0,0}; // Init to zero.
     gp_Pnt pc;
     get_circle_center(p0,plane,i,j,k,pc);
 
     // Draw full circle.
     if(p0.Distance(p1)==0 && p0.Distance(pc)>0){
+        lenght=get_3d_circle_lenght(p0,pc);
         pw=p0;
         if(plane==0){
             return colorize( draw_3d_pc_circle(pc,0,0,1,p1.Distance(pc)),Quantity_NOC_GRAY50,0);
@@ -1125,36 +1150,49 @@ Handle(AIS_Shape) draw_primitives::draw_3d_gcode_arc_circle_helix(const gp_Pnt& 
 
     // Draw helix, spiral.
     if( (plane==0 && p0.Z()!=p1.Z()) || (plane==1 && p0.Y()!=p1.Y()) || (plane==2 && p0.X()!=p1.X()) ){
-        return draw_2d_gcode_G2_G3_helix(p0,p1,plane,gcode,i,j,k,turns,g2_continuity);
+        return draw_2d_gcode_G2_G3_helix(p0,p1,plane,gcode,i,j,k,turns,g2_continuity,lenght);
     }
 
     // G2 arc plane 0
     if(gcode==2 && plane==0 && p0.Distance(p1)>0 && p0.Distance(pc)>0){
-        return colorize( draw_3d_pc_arc(p1,p0,pc,0,0,1,pw),Quantity_NOC_GRAY50,0);
+        Handle(AIS_Shape) aShape=colorize( draw_3d_pc_arc(p1,p0,pc,0,0,1,pw),Quantity_NOC_GRAY50,0);
+        lenght=get_3d_arc_lenght(p0,pw,p1);
+        return aShape;
     }
     // G2 arc plane 1
     if(gcode==2 && plane==1 && p0.Distance(p1)>0 && p0.Distance(pc)>0){
-        return colorize( draw_3d_pc_arc(p1,p0,pc,0,1,0,pw),Quantity_NOC_GRAY50,0);
+        Handle(AIS_Shape) aShape=colorize( draw_3d_pc_arc(p1,p0,pc,0,1,0,pw),Quantity_NOC_GRAY50,0);
+        lenght=get_3d_arc_lenght(p0,pw,p1);
+        return aShape;
     }
     // G2 arc plane 2
     if(gcode==2 && plane==2 && p0.Distance(p1)>0 && p0.Distance(pc)>0){
-        return colorize( draw_3d_pc_arc(p1,p0,pc,1,0,0,pw),Quantity_NOC_GRAY50,0);
+        Handle(AIS_Shape) aShape=colorize( draw_3d_pc_arc(p1,p0,pc,1,0,0,pw),Quantity_NOC_GRAY50,0);
+        lenght=get_3d_arc_lenght(p0,pw,p1);
+        return aShape;
     }
 
     // G3 arc plane 0
     if(gcode==3 && plane==0 && p0.Distance(p1)>0 && p0.Distance(pc)>0){
-        return colorize( draw_3d_pc_arc(p0,p1,pc,0,0,1,pw),Quantity_NOC_GRAY50,0);
+        Handle(AIS_Shape) aShape=colorize( draw_3d_pc_arc(p0,p1,pc,0,0,1,pw),Quantity_NOC_GRAY50,0);
+        lenght=get_3d_arc_lenght(p0,pw,p1);
+        return aShape;
     }
     // G3 arc plane 1
     if(gcode==3 && plane==1 && p0.Distance(p1)>0 && p0.Distance(pc)>0){
-        return colorize( draw_3d_pc_arc(p0,p1,pc,0,1,0,pw),Quantity_NOC_GRAY50,0);
+        Handle(AIS_Shape) aShape=colorize( draw_3d_pc_arc(p0,p1,pc,0,1,0,pw),Quantity_NOC_GRAY50,0);
+        lenght=get_3d_arc_lenght(p0,pw,p1);
+        return aShape;
     }
     // G3 arc plane 2
     if(gcode==3 && plane==2 && p0.Distance(p1)>0 && p0.Distance(pc)>0){
-        return colorize( draw_3d_pc_arc(p0,p1,pc,1,0,0,pw),Quantity_NOC_GRAY50,0);
+        Handle(AIS_Shape) aShape= colorize( draw_3d_pc_arc(p0,p1,pc,1,0,0,pw),Quantity_NOC_GRAY50,0);
+        lenght=get_3d_arc_lenght(p0,pw,p1);
+        return aShape;
     }
 
     std::cout<<"Error draw 3d gcode arc, circle. Draws point."<<std::endl;
+    lenght=0;
     return draw_3d_point(p0);
 }
 
@@ -1699,6 +1737,22 @@ double draw_primitives::get_3d_arc_lenght(const gp_Pnt &p0, const gp_Pnt &pw, co
     return angle_rad*radius;
 }
 
+double draw_primitives::get_3d_circle_lenght(const gp_Pnt &p0, const gp_Pnt &pc){
+    double radius = pc.Distance(p0);
+    double circumference = 2 * M_PI * radius;
+    return circumference;
+}
+
+double draw_primitives::get_3d_pvec_lenght(const std::vector<gp_Pnt> &pvec){
+
+    double ltot;
+    for(uint i=0; i<pvec.size()-1; i++){
+        double l=pvec[i].Distance(pvec[i+1]);
+        ltot+=l;
+    }
+    return ltot;
+}
+
 // Validated on xy plane fwd & rev ok. Left for info.
 void draw_primitives::interpolate_point_on_arc(const gp_Pnt &p0, const gp_Pnt &pw, const gp_Pnt &p1, const double &progress, gp_Pnt &pi){
 
@@ -1752,10 +1806,30 @@ void draw_primitives::interpolate_point_on_arc(const gp_Pnt &p0, const gp_Pnt &p
 
 void draw_primitives::interpolate_point_on_circle(const gp_Pnt &p0, const gp_Pnt &pc, const int &plane, const int &gcode, const double &progress, gp_Pnt &pi){
 
+    gp_Dir dir;
+    if (plane == 0) {
+        dir = gp_Dir(0, 0, 1);
+    } else if (plane == 1) {
+        dir = gp_Dir(0, 1, 0);
+    } else if (plane == 2) {
+        dir = gp_Dir(1, 0, 0);
+    } else {
+        throw std::invalid_argument("Invalid plane value. Expected 0, 1, or 2.");
+    }
 
+    double angle;
+    if (gcode == 2) { // Interpolate clockwise
+        angle = -progress * 2 * M_PI;
+    } else if (gcode == 3) { // Interpolate counter-clockwise
+        angle = progress * 2 * M_PI;
+    } else {
+        throw std::invalid_argument("Invalid gcode value. Expected 2 or 3.");
+    }
 
-
-
+    // Calculate the interpolated point on the circle
+    gp_Trsf rotation;
+    rotation.SetRotation(gp_Ax1(pc, dir), angle);
+    pi = p0.Transformed(rotation);
 }
 
 void draw_primitives::print_gp_Pnt(gp_Pnt pnt){
@@ -2545,8 +2619,8 @@ bool draw_primitives::snap_to_closest_endpoint(std::vector<Handle(AIS_Shape)> sh
             } else {
                 // std::cout << "The shape does not represent a single point." << std::endl;
 
-                Handle(AIS_Shape) shape=shapevec.at(i);
-                const TopoDS_Edge& edge = TopoDS::Edge(shape->Shape());
+                Handle(AIS_Shape) gcode_shape=shapevec.at(i);
+                const TopoDS_Edge& edge = TopoDS::Edge(gcode_shape->Shape());
                 Standard_Real first, last;
                 Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, first, last);
 
@@ -2580,8 +2654,8 @@ bool draw_primitives::snap_to_closest_midpoint(std::vector<Handle(AIS_Shape)> sh
 
     for(uint i=0; i<shapevec.size(); i++){
 
-        Handle(AIS_Shape) shape=shapevec.at(i);
-        const TopoDS_Edge& edge = TopoDS::Edge(shape->Shape());
+        Handle(AIS_Shape) gcode_shape=shapevec.at(i);
+        const TopoDS_Edge& edge = TopoDS::Edge(gcode_shape->Shape());
         Standard_Real first, last;
         Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, first, last);
         gp_Pnt p1= curve->Value((first+last)/2);
@@ -3176,7 +3250,7 @@ Handle(AIS_Shape) draw_primitives::draw_3d_line_wire_low_memory_usage(const std:
     }
 }
 
-Handle(AIS_Shape) draw_primitives::draw_3d_spline_degree_3(std::vector<gp_Pnt> pvec){
+Handle(AIS_Shape) draw_primitives::draw_3d_spline_degree_3(std::vector<gp_Pnt> &pvec, double &length){
 
     filter_out_duplicate_points(pvec);
 
@@ -3215,6 +3289,11 @@ Handle(AIS_Shape) draw_primitives::draw_3d_spline_degree_3(std::vector<gp_Pnt> p
     // Retrieve the interpolated B-spline curve
     Handle(Geom_BSplineCurve) spline = interpolator.Curve();
 
+    // Compute the length of the B-spline curve
+    GeomAdaptor_Curve adaptorCurve(spline);
+    GCPnts_AbscissaPoint lengthCalculator;
+    length = lengthCalculator.Length(adaptorCurve);
+
     // Create an edge from the B-spline curve
     BRepBuilderAPI_MakeEdge edgeMaker(spline);
     TopoDS_Edge edge = edgeMaker.Edge();
@@ -3223,9 +3302,59 @@ Handle(AIS_Shape) draw_primitives::draw_3d_spline_degree_3(std::vector<gp_Pnt> p
     return new AIS_Shape(edge);
 }
 
-void draw_primitives::interpolate_point_on_spline_degree_3(const std::vector<gp_Pnt>& pvec, double progress, gp_Pnt &pi) {
+double draw_primitives::get_3d_spline_lenght_degree_3(std::vector<gp_Pnt> pvec){
+    // Filter out duplicate points
+    filter_out_duplicate_points(pvec);
+
+    // Handle special cases
+    if (pvec.size() == 2) {
+        return pvec.front().Distance(pvec.back());
+    }
+    if (pvec.size() < 2) {
+        std::cerr << "spline error, not enough points given." << std::endl;
+        return 0.0;
+    }
+    if (pvec.size() == 0) {
+        std::cerr << "spline error, no points given." << std::endl;
+        return 0.0;
+    }
+
+    bool periodicFlag = false;
+    double tolerance = Precision::Approximation();
+
+    // Create handle to array of points
+    Handle(TColgp_HArray1OfPnt) arrayPoints = new TColgp_HArray1OfPnt(1, static_cast<Standard_Integer>(pvec.size()));
+    for (size_t i = 0; i < pvec.size(); ++i) {
+        arrayPoints->SetValue(static_cast<Standard_Integer>(i) + 1, pvec[i]);
+    }
+
+    // Create GeomAPI_Interpolate object
+    GeomAPI_Interpolate interpolator(arrayPoints, periodicFlag, tolerance);
+
+    // Perform interpolation
+    interpolator.Perform();
+
+    // Check if interpolation was successful
+    if (!interpolator.IsDone()) {
+        std::cerr << "Failed to interpolate points." << std::endl;
+        return 0.0;
+    }
+
+    // Retrieve the interpolated B-spline curve
+    Handle(Geom_BSplineCurve) spline = interpolator.Curve();
+
+    // Compute the length of the B-spline curve
+    GeomAdaptor_Curve adaptorCurve(spline);
+    GCPnts_AbscissaPoint lengthCalculator;
+    Standard_Real length = lengthCalculator.Length(adaptorCurve);
+
+    return length;
+}
+
+void draw_primitives::interpolate_point_on_spline_degree_3(const std::vector<gp_Pnt>& pvec, const double &progress, gp_Pnt &pi) {
     // Clamp progress between 0 and 1
-    progress = std::max(0.0, std::min(1.0, progress));
+    double pro=progress;
+    pro= std::max(0.0, std::min(1.0, pro));
 
     // Check if there are enough points for interpolation
     if (pvec.size() < 2) {
@@ -3264,7 +3393,7 @@ void draw_primitives::interpolate_point_on_spline_degree_3(const std::vector<gp_
     Standard_Real last = spline->LastParameter();
 
     // Calculate the parameter value corresponding to the progress
-    Standard_Real parameter = first + progress * (last - first);
+    Standard_Real parameter = first + pro * (last - first);
 
     // Evaluate the point on the curve at the calculated parameter value
     spline->D0(parameter, pi);
@@ -3273,10 +3402,10 @@ void draw_primitives::interpolate_point_on_spline_degree_3(const std::vector<gp_
 void draw_primitives::get_transformed_line_points(Handle(AIS_Shape) aShape, gp_Pnt &p0, gp_Pnt &p1){
 
     // Get the shape from AIS_Shape
-    TopoDS_Shape shape = aShape->Shape();
+    TopoDS_Shape gcode_shape = aShape->Shape();
 
     // Get the edge and its geometry
-    TopoDS_Edge edge = TopoDS::Edge(shape);
+    TopoDS_Edge edge = TopoDS::Edge(gcode_shape);
 
     // Get the local transformation of the edge
     gp_Trsf localTransformation = aShape->LocalTransformation();
@@ -3298,7 +3427,7 @@ std::vector<gp_Pnt> draw_primitives::record_tooldir_path_line(gp_Pnt p0, gp_Pnt 
     gp_Pnt pi, abci, p, ta;
 
     const int num_cycles = 100;  // Number of interpolation cycles
-    const double min_distance = 0.5;  // Minimum distance between points to be added to the vector
+    const double min_distance = 0.1;  // Minimum distance between points to be added to the vector
 
     for (int i = 0; i <= num_cycles; ++i) {
         double t = static_cast<double>(i) / num_cycles;
@@ -3345,6 +3474,90 @@ std::vector<gp_Pnt> draw_primitives::record_tooldir_path_arc(const gp_Pnt &p0, c
 
         // Interpolate points on the arc and line
         interpolate_point_on_arc(p0, pw, p1, t, pi);
+        interpolate_point_on_line(abc0, abc1, t, abci);
+
+        // Create a shape and transform it
+        Handle(AIS_Shape) aShape = draw_3d_line({0, 0, 0}, {0, 0, tp_height});
+        aShape = rotate_translate_3d(aShape, pi, abci.X(), abci.Y(), abci.Z());
+
+        // Get transformed points
+        get_transformed_line_points(aShape, p, ta);
+
+        // Always add the first point
+        if (pvec.empty()) {
+            pvec.push_back(ta);
+        } else {
+            // Add points to the vector if the distance condition is met
+            if (pvec.back().Distance(ta) > min_distance) {
+                pvec.push_back(ta);
+            }
+        }
+    }
+
+    // Ensure the last point is added
+    if (!pvec.empty()) {
+        pvec.push_back(ta);  // Add the last generated point to pvec
+    }
+
+    return pvec;
+}
+
+std::vector<gp_Pnt> draw_primitives::record_tooldir_path_circle(const gp_Pnt &p0, const gp_Pnt &pc, const int &plane, const int &gcode,
+                                                                const gp_Pnt &abc0, const gp_Pnt &abc1,
+                                                                const double tp_height) {
+    std::vector<gp_Pnt> pvec;
+    gp_Pnt pi, abci, p, ta;
+
+    const int num_cycles = 100;  // Number of interpolation cycles
+    const double min_distance = 0.5;  // Minimum distance between points to be added to the vector
+
+    for (int i = 0; i <= num_cycles; ++i) {
+        double t = static_cast<double>(i) / num_cycles;
+
+        // Interpolate points on the arc and line
+        interpolate_point_on_circle(p0, pc, plane, gcode, t, pi);
+        interpolate_point_on_line(abc0, abc1, t, abci);
+
+        // Create a shape and transform it
+        Handle(AIS_Shape) aShape = draw_3d_line({0, 0, 0}, {0, 0, tp_height});
+        aShape = rotate_translate_3d(aShape, pi, abci.X(), abci.Y(), abci.Z());
+
+        // Get transformed points
+        get_transformed_line_points(aShape, p, ta);
+
+        // Always add the first point
+        if (pvec.empty()) {
+            pvec.push_back(ta);
+        } else {
+            // Add points to the vector if the distance condition is met
+            if (pvec.back().Distance(ta) > min_distance) {
+                pvec.push_back(ta);
+            }
+        }
+    }
+
+    // Ensure the last point is added
+    if (!pvec.empty()) {
+        pvec.push_back(ta);  // Add the last generated point to pvec
+    }
+
+    return pvec;
+}
+
+std::vector<gp_Pnt> draw_primitives::record_tooldir_path_spline_degree_3(const std::vector<gp_Pnt> pwvec,
+                                                                         const gp_Pnt &abc0, const gp_Pnt &abc1,
+                                                                         const double tp_height) {
+    std::vector<gp_Pnt> pvec;
+    gp_Pnt pi, abci, p, ta;
+
+    const int num_cycles = 100;  // Number of interpolation cycles
+    const double min_distance = 0.5;  // Minimum distance between points to be added to the vector
+
+    for (int i = 0; i <= num_cycles; ++i) {
+        double t = static_cast<double>(i) / num_cycles;
+
+        // Interpolate points on the spline and line
+        interpolate_point_on_spline_degree_3(pwvec,t,pi);
         interpolate_point_on_line(abc0, abc1, t, abci);
 
         // Create a shape and transform it

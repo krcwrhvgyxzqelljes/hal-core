@@ -10,7 +10,4 @@
 /home/user/hal-core-2.0/src/hal/components/hostmot2/../../../../rtlib/hostmot2.so
 /home/user/hal-core-2.0/src/hal/components/motion/../../../../rtlib/motion.so
 /home/user/hal-core-2.0/src/hal/components/state_machine/../../../../rtlib/state_machine.so
-/home/user/hal-core-2.0/src/hal/components/ethercat/../../../../rtlib/lcec.so
-/home/user/hal-core-2.0/src/hal/components/ethercat/../../../../rtlib/lcec_conf.so
-/home/user/hal-core-2.0/src/hal/components/hm2_eth/../../../../rtlib/hm2_eth.so
 /home/user/hal-core-2.0/build/projects/cnc/../../../bin/cnc

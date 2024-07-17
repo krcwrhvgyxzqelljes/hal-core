@@ -1,0 +1,14 @@
+# intro
+g21 g40 g90 
+g64 p0.1 q1
+f1 # initialize feedrate
+s1 # initialize spindle speed/power
+g1 x0 y0 z0
+g41 g0 x-10 y-10
+g1 x100 y100
+g5 x1000 y0 z10   x300 y-100 z-10   x400 y-233 z0
+g1 y-300
+x0 y0
+x-50 y-50
+m5 
+m30

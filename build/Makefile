@@ -318,45 +318,6 @@ state_machine/fast:
 .PHONY : state_machine/fast
 
 #=============================================================================
-# Target rules for targets named lcec
-
-# Build rule for target.
-lcec: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 lcec
-.PHONY : lcec
-
-# fast build rule for target.
-lcec/fast:
-	$(MAKE) $(MAKESILENT) -f src/hal/components/ethercat/CMakeFiles/lcec.dir/build.make src/hal/components/ethercat/CMakeFiles/lcec.dir/build
-.PHONY : lcec/fast
-
-#=============================================================================
-# Target rules for targets named lcec_conf
-
-# Build rule for target.
-lcec_conf: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 lcec_conf
-.PHONY : lcec_conf
-
-# fast build rule for target.
-lcec_conf/fast:
-	$(MAKE) $(MAKESILENT) -f src/hal/components/ethercat/CMakeFiles/lcec_conf.dir/build.make src/hal/components/ethercat/CMakeFiles/lcec_conf.dir/build
-.PHONY : lcec_conf/fast
-
-#=============================================================================
-# Target rules for targets named hm2_eth
-
-# Build rule for target.
-hm2_eth: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 hm2_eth
-.PHONY : hm2_eth
-
-# fast build rule for target.
-hm2_eth/fast:
-	$(MAKE) $(MAKESILENT) -f src/hal/components/hm2_eth/CMakeFiles/hm2_eth.dir/build.make src/hal/components/hm2_eth/CMakeFiles/hm2_eth.dir/build
-.PHONY : hm2_eth/fast
-
-#=============================================================================
 # Target rules for targets named cnc
 
 # Build rule for target.
@@ -400,10 +361,7 @@ help:
 	@echo "... hal_parport"
 	@echo "... halcmd"
 	@echo "... halcore"
-	@echo "... hm2_eth"
 	@echo "... hostmot2"
-	@echo "... lcec"
-	@echo "... lcec_conf"
 	@echo "... module_helper"
 	@echo "... motion"
 	@echo "... rtapi_app"

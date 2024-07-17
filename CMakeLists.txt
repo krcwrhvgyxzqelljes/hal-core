@@ -46,10 +46,10 @@ add_subdirectory(src/hal/components/motion)
 add_subdirectory(src/hal/components/state_machine)
 
 # Ethercat lcec driver.
-add_subdirectory(src/hal/components/ethercat)
+# add_subdirectory(src/hal/components/ethercat)
 
 # Mesa hardware driver.
-add_subdirectory(src/hal/components/hm2_eth)
+# add_subdirectory(src/hal/components/hm2_eth)
 
 # Parse c c++ style gcode into a out.ngc file
 # add_subdirectory(vendor/code_parser)

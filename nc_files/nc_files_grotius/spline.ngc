@@ -1,0 +1,17 @@
+# intro
+g21 # unit:mm
+g40 # cutter compensation off
+g80 # cancel canned cycle modal motion
+g90 # absolute distance, no offsets
+g64 p0.1 q1
+f1 # initialize feedrate
+s1 # initialize spindle speed/power
+g0 x0 y0 z0
+g0 z5
+g1 y50
+g5 x50 y50
+     x100 y10
+g1 X150
+g1 Y150
+m5 
+m30

@@ -316,3 +316,8 @@ void MainWindow::on_toolButton_clear_toolpath_pressed()
     occ->clear_toolpath();
 }
 
+void MainWindow::on_toolButton_empty_2_pressed()
+{
+
+}
+

@@ -34,7 +34,7 @@ void form_auto::on_toolButton_open_pressed()
         mainWindow->ui->label_current_file->setText(QString::fromStdString(m_file_name));
 
         std::vector<gcode_line> gvec;
-        if(!gcode_parser().tokenize(m_file_name,gvec,0)){
+        if(!gcode_parser().tokenize(m_file_name,gvec,false)){
             std::cout<<"tokenize error."<<std::endl;
         } else {
             std::cout<<"tokenize ok."<<std::endl;
@@ -46,18 +46,22 @@ void form_auto::on_toolButton_open_pressed()
         }
 
         // Draw the gcode limit box.
-        Handle(AIS_Shape) aShape_box = draw_primitives::draw_3d_box(m_gcode_limits.xmax-m_gcode_limits.xmin,
-                                                                    m_gcode_limits.ymax-m_gcode_limits.ymin,
-                                                                    m_gcode_limits.zmax-m_gcode_limits.zmin);
-        aShape_box=draw_primitives::translate_3d(aShape_box,{0,0,0},{m_gcode_limits.xmin,m_gcode_limits.ymin,m_gcode_limits.zmin});
-        aShape_box=draw_primitives::colorize(aShape_box,Quantity_NOC_ANTIQUEWHITE,0.98);
-        mainWindow->occ->add_shapevec( aShape_box );
+        int draw_box=true;
+        if(draw_box){
+            Handle(AIS_Shape) aShape_box = draw_primitives::draw_3d_box(m_gcode_limits.xmax-m_gcode_limits.xmin,
+                                                                        m_gcode_limits.ymax-m_gcode_limits.ymin,
+                                                                        m_gcode_limits.zmax-m_gcode_limits.zmin);
+            aShape_box=draw_primitives::translate_3d(aShape_box,{0,0,0},{m_gcode_limits.xmin,m_gcode_limits.ymin,m_gcode_limits.zmin});
+            aShape_box=draw_primitives::colorize(aShape_box,Quantity_NOC_ANTIQUEWHITE,0.99);
+            aShape_box=draw_primitives::show_boundary(aShape_box,false);
+            mainWindow->occ->add_shapevec( aShape_box );
+        }
 
-        std::vector<shape> svec;
-        if(!gcode_parser().tokens_to_shapes(gvec,svec)){
+        std::vector<gcode_shape> svec;
+        if(!gcode_parser().tokens_to_shapes(gvec,svec,true)){
             std::cout<<"tokens to shape error."<<std::endl;
         } else {
-            std::cout<<"tokens to shape ok."<<std::endl; 
+            std::cout<<"tokens to shape ok."<<std::endl;
             for (auto& i : svec) {
                 mainWindow->occ->add_shapevec(i.aShape);
             }
@@ -94,7 +98,7 @@ void form_auto::on_toolButton_reload_pressed()
         mainWindow->editor->appendPlainText(gcode);
 
         std::vector<gcode_line> gvec;
-        if(!gcode_parser().tokenize(m_file_name,gvec,0)){
+        if(!gcode_parser().tokenize(m_file_name,gvec,1)){
             std::cout<<"tokenize error."<<std::endl;
         } else {
             std::cout<<"tokenize ok."<<std::endl;
@@ -102,17 +106,21 @@ void form_auto::on_toolButton_reload_pressed()
         gcode_parser::process_limits(gvec,m_gcode_limits);
 
         // Draw the gcode limit box.
-        Handle(AIS_Shape) aShape_box = draw_primitives::draw_3d_box(m_gcode_limits.xmax-m_gcode_limits.xmin,
-                                                                    m_gcode_limits.ymax-m_gcode_limits.ymin,
-                                                                    m_gcode_limits.zmax-m_gcode_limits.zmin);
-        aShape_box=draw_primitives::translate_3d(aShape_box,{0,0,0},{m_gcode_limits.xmin,m_gcode_limits.ymin,m_gcode_limits.zmin});
-        aShape_box=draw_primitives::colorize(aShape_box,Quantity_NOC_ANTIQUEWHITE,0.98);
-        mainWindow->occ->add_shapevec( aShape_box );
+        int draw_box=true;
+        if(draw_box){
+            Handle(AIS_Shape) aShape_box = draw_primitives::draw_3d_box(m_gcode_limits.xmax-m_gcode_limits.xmin,
+                                                                        m_gcode_limits.ymax-m_gcode_limits.ymin,
+                                                                        m_gcode_limits.zmax-m_gcode_limits.zmin);
+            aShape_box=draw_primitives::translate_3d(aShape_box,{0,0,0},{m_gcode_limits.xmin,m_gcode_limits.ymin,m_gcode_limits.zmin});
+            aShape_box=draw_primitives::colorize(aShape_box,Quantity_NOC_ANTIQUEWHITE,0.99);
+            aShape_box=draw_primitives::show_boundary(aShape_box,false);
+            mainWindow->occ->add_shapevec( aShape_box );
+        }
 
         mainWindow->ui->label_current_file->setText(QString::fromStdString(m_file_name));
 
-        std::vector<shape> svec;
-        if(!gcode_parser().tokens_to_shapes(gvec,svec)){
+        std::vector<gcode_shape> svec;
+        if(!gcode_parser().tokens_to_shapes(gvec,svec,false)){
             std::cout<<"tokens to shape error."<<std::endl;
         } else {
             std::cout<<"tokens to shape ok."<<std::endl;
@@ -127,7 +135,9 @@ void form_auto::on_toolButton_reload_pressed()
         } else {
             std::cout<<"optimize tooldir path ok."<<std::endl;
             for (auto& i : aisvec) {
-                mainWindow->occ->add_shapevec(i);
+                if(ui->checkBox_show_tooldir_blend_path->isChecked()){
+                    mainWindow->occ->add_shapevec(i);
+                }
             }
         }
 
